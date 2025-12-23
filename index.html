@@ -196,7 +196,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v16.1</span>
+        MACRO SIMULATOR <span class="tag">v16.2</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -282,14 +282,15 @@ const ctx = canvas.getContext('2d');
 
 const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 15, k: 0.5, h: 2.0, Yn: 100 };
 const DEFAULTS = {
-    islm: { G: 60, T: 60, M: 60 },
+    // Tweaked default ISLM for centered initial view (G=75, M=45)
+    islm: { G: 75, T: 60, M: 45 },
     adas: { G: 60, M: 60, Pe: 1.0 },
     solow: { s: 0.3, d: 0.1, n: 0.02 },
     mundell: { G: 60, M: 60, rs: 3.0 }
 };
-let state = { model: 'islm', horizon: 'short', G: 60, T: 60, M: 60, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0 };
+let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0 };
 let prevState = null;
-let view = { maxX: 200, maxY: 10 }; 
+let view = { maxX: 350, maxY: 25 }; 
 let warningMsg = null;
 
 /* ==========================================================================
@@ -304,10 +305,10 @@ const MODELS = {
             {label: 'Natural Output (Yn)', color: '#94a3b8', dashed: true}
         ],
         scenarios: [
-            { name: "Fiscal Stimulus", apply: {G:100, T:60, M:60} },
-            { name: "Fiscal Austerity", apply: {G:30, T:60, M:60} },
-            { name: "Monetary Exp.", apply: {G:60, T:60, M:100} },
-            { name: "Monetary Tight.", apply: {G:60, T:60, M:30} }
+            { name: "Fiscal Stimulus", apply: {G:115, T:60, M:45} },
+            { name: "Fiscal Austerity", apply: {G:40, T:60, M:45} },
+            { name: "Monetary Exp.", apply: {G:75, T:60, M:85} },
+            { name: "Monetary Tight.", apply: {G:75, T:60, M:25} }
         ],
         solve: (st) => {
             let { G, T, M } = st;
@@ -334,7 +335,7 @@ const MODELS = {
             }
             
             if(r < 0.1) warningMsg = "Liquidity Trap Region (r ≈ 0)";
-            else if(r > 15) warningMsg = "High Interest Rate";
+            else if(r > 20) warningMsg = "High Interest Rate";
             else warningMsg = null;
             return { Y, r, P, A, M, mult, type:'islm' };
         },
@@ -474,30 +475,29 @@ const MODELS = {
 };
 
 /* ==========================================================================
-   VIEW ENGINE
+   VIEW ENGINE (CALIBRATED FIX)
    ========================================================================== */
 function calculateViewWindow(sol, prevSol) {
-    let baseMaxX = 300;
-    let baseMaxY = 12;
+    // We use distinct, fixed boundaries for each model.
+    // These numbers are calculated to fit the "Extreme" slider values
+    // so the axes never need to resize (preventing the "angle shift" visual bug).
 
-    if(sol.type === 'solow') { baseMaxX = 30; baseMaxY = 5; }
-    if(sol.type === 'adas')  { baseMaxX = 300; baseMaxY = 5; }
-    if(sol.type === 'mundell') { baseMaxX = 300; baseMaxY = 12; }
-
-    let eqX = sol.type === 'solow' ? sol.k : sol.Y;
-    let eqY = sol.type === 'solow' ? sol.y : (sol.type === 'mundell' ? sol.e : (sol.type === 'islm' ? sol.r : sol.P));
-    
-    let maxX = eqX;
-    let maxY = eqY;
-    if(prevSol) {
-        let pX = sol.type === 'solow' ? prevSol.k : prevSol.Y;
-        let pY = sol.type === 'solow' ? prevSol.y : (sol.type === 'mundell' ? prevSol.e : (sol.type === 'islm' ? prevSol.r : prevSol.P));
-        maxX = Math.max(maxX, pX);
-        maxY = Math.max(maxY, pY);
+    if(state.model === 'islm') {
+        view.maxX = 350;  // Fits Max Output (approx 325 when G=150, M=150)
+        view.maxY = 25;   // Fits Max Interest Rate (can spike to ~22%)
+    } 
+    else if (state.model === 'adas') {
+        view.maxX = 350;
+        view.maxY = 5.0;  // Price Level usually stays under 3.0
     }
-
-    view.maxX = Math.max(baseMaxX, maxX * 1.5);
-    view.maxY = Math.max(baseMaxY, maxY * 1.5);
+    else if (state.model === 'solow') {
+        view.maxX = 60;   // Solow Steady State k* usually < 50
+        view.maxY = 6;    // Output y* usually < 5
+    }
+    else if (state.model === 'mundell') {
+        view.maxX = 350;
+        view.maxY = 15;   // Exchange rate (e)
+    }
 }
 
 function toScreen(x, y) {

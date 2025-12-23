@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MacroSim | v19.3 Fixed</title>
+    <title>MacroSim | v19.4 Final Fix</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -93,7 +93,6 @@
             padding: 6px 12px; font-size: 0.75rem; cursor: pointer; border-radius: 6px; font-weight: 600;
         }
         .sim-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
-        
         .reset-btn {
             width: calc(100% - 40px); margin: 0 20px 20px 20px; padding: 10px; background: transparent;
             border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer; border-radius: 6px;
@@ -106,7 +105,6 @@
             transition: background-color 0.3s;
         }
 
-        /* RESTORED TIME HORIZON TABS */
         .horizon-tabs {
             position: absolute; top: 15px; right: 15px; z-index: 10;
             display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border);
@@ -128,7 +126,6 @@
         .math-block { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; overflow-x: auto; }
         .analysis-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
         
-        /* Stats moved slightly to accommodate horizon tabs */
         .stats-overlay { position: absolute; top: 60px; right: 15px; display: flex; gap: 10px; z-index: 10; }
         .stat-box { background: var(--bg-panel); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0.95; }
         .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
@@ -156,7 +153,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v19.3</span>
+        MACRO SIMULATOR <span class="tag">v19.4</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -235,13 +232,12 @@ function getVar(name) { return getComputedStyle(document.documentElement).getPro
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-/* ECONOMIC PARAMETERS */
 const PARAMS = { 
     c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, 
     m: 0.15, X0: 20, beta: 0.5, alpha: 0.33 
 };
 
-/* DEFAULTS for Baseline Ghost Curves */
+/* DEFAULTS */
 const DEFAULTS = {
     islm: { G: 70, T: 60, M: 50, isOpen: false },
     adas: { G: 60, M: 50, Pe: 1.0, P: 1.0 },
@@ -266,7 +262,7 @@ const MODELS = {
         legend: [
             {label: 'IS Curve', color: '#3b82f6'},
             {label: 'LM Curve', color: '#ef4444'},
-            {label: 'Liquidity Trap', color: '#ef4444', dashed: true}
+            {label: 'Natural Output (Yn)', color: '#94a3b8', dashed: true}
         ],
         scenarios: [
             { name: "Fiscal Stimulus", apply: {G:120} },
@@ -274,45 +270,74 @@ const MODELS = {
             { name: "Liquidity Trap Case", apply: {M:120, G:30} }
         ],
         solve: (st) => {
-            let { G, T, M, isOpen } = st;
+            let { G, T, M, isOpen, horizon } = st;
             G=Math.min(200,Math.max(10,G)); M=Math.max(10,M);
-            const { c1, c0, I0, b, m, X0 } = PARAMS;
+            const { c1, c0, I0, b, m, X0, Yn } = PARAMS;
             const r_min = 0.1; // Trap floor
 
             const mult = isOpen ? 1/(1 - c1 + m) : 1/(1 - c1);
             const Aut = c0 + I0 + G - c1*T + (isOpen ? X0 : 0);
             
-            // 1. Solve Normal Eq
-            const denom = 1 + (mult * b * PARAMS.k) / PARAMS.h;
-            const num = mult * (Aut + (b * M)/PARAMS.h);
-            let Y = num / denom;
-            let r = (PARAMS.k*Y - M)/PARAMS.h;
+            // IS Curve Function: Y = mult(Aut - b*r) -> r = (Aut - Y/mult)/b
             
-            // 2. Liquidity Trap Regime (Decoupling)
-            if(r < r_min) {
-                r = r_min;
-                Y = mult * (Aut - b*r_min);
-                warningMsg = "Liquidity Trap: Mon. Policy Ineffective";
+            let Y, r;
+            
+            if (horizon === 'long') {
+                // LONG RUN: Y fixed at Yn. Prices adjust LM to meet intersection.
+                Y = Yn;
+                r = (Aut - Y/mult) / b; // r determined by IS at Yn
+                // M/P = kY - hr -> P = M / (kY - hr). P implicit.
+                // We fake the M effect for drawing by calculating an effective M that puts LM at intersection
+                // Effective M = k*Y - h*r
+                // But in drawing we use 'M' and 'P=1'. So we just replace M with M_eff in return object.
+                const M_eff = PARAMS.k*Y - PARAMS.h*r;
+                // Override M for the drawing phase to show the shifted LM
+                return { Y, r, Aut, mult, M: M_eff, type: 'islm', horizon };
+            } 
+            else {
+                // SHORT & MEDIUM RUN: Price fixed (or sticky). Standard IS-LM.
+                // Medium run in pure IS-LM is often just transition, we treat as SR here for simplicity
+                // unless we want to show partial P adjustment. Let's keep it SR logic for stability.
+                
+                // 1. Solve Normal Eq
+                const denom = 1 + (mult * b * PARAMS.k) / PARAMS.h;
+                const num = mult * (Aut + (b * M)/PARAMS.h);
+                Y = num / denom;
+                r = (PARAMS.k*Y - M)/PARAMS.h;
+                
+                // 2. Liquidity Trap Regime (Decoupling)
+                if(r < r_min) {
+                    r = r_min;
+                    Y = mult * (Aut - b*r_min);
+                    warningMsg = "Liquidity Trap: Mon. Policy Ineffective";
+                }
+                return { Y, r, Aut, mult, M, type: 'islm', horizon };
             }
-            return { Y, r, Aut, mult, M, type: 'islm' };
         },
         draw: (sol, isGhost) => {
             const sIS = isGhost ? 'ghost' : 'is';
             const sLM = isGhost ? 'ghost' : 'lm';
             
+            // IS Curve
             drawCurve(y => (sol.Aut - y/sol.mult)/PARAMS.b, sIS, isGhost?'IS₀':'IS₁');
             
-            // Piecewise LM: Pure horizontal line until crossover
+            // LM Curve with clean floor
+            // kinkY is where LM hits r=0.1
+            // (kY - M)/h = 0.1 => kY - M = 0.1h => Y = (M + 0.1h)/k
             const kinkY = (sol.M + PARAMS.h*0.1)/PARAMS.k;
             drawCurve(y => {
-                if(y < kinkY) return 0.1;
+                if(y <= kinkY) return 0.1;
                 return (PARAMS.k*y - sol.M)/PARAMS.h;
             }, sLM, isGhost?'LM₀':'LM₁');
             
             if(!isGhost) drawDot(sol.Y, sol.r);
+            if(sol.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#94a3b8', 'Yn');
         },
-        explain: (sol) => `$$ IS: Y = ${sol.mult.toFixed(2)}(A - ${PARAMS.b}r) \\quad [NX = ${state.isOpen?'X_0 - mY':0}] $$
-                           $$ LM: r = \\max(0.1\\%, \\frac{kY - M}{h}) $$`
+        explain: (sol) => {
+            const hText = sol.horizon==='long' ? "(Long Run: Output fixed, Prices adjust)" : "(Short Run: Prices fixed)";
+            return `$$ \\text{IS-LM } ${hText} $$ 
+                    $$ Y = ${sol.Y.toFixed(1)}, r = ${sol.r.toFixed(2)}\\% $$`;
+        }
     },
 
     adas: {
@@ -333,32 +358,54 @@ const MODELS = {
             const theta = (h + b*k*mult); 
             const term1 = (h * mult * Aut) / theta; 
             const term2 = (b * mult * st.M) / theta; 
-            const lambda = 0.5;
             
-            const B_quad = st.Pe + lambda*(term1 - Yn);
-            const C_quad = -lambda * term2;
-            const P_eq = (B_quad + Math.sqrt(Math.max(0, B_quad*B_quad - 4*1*C_quad))) / 2;
-            const Y_eq = term1 + term2/P_eq;
+            let Y_eq, P_eq, lambda;
 
-            return { Y: Y_eq, P: P_eq, term1, term2, Pe: st.Pe, Yn, type:'adas' };
-        },
-        step: () => {
-            const sol = MODELS.adas.solve(state);
-            const gamma = 0.5; 
-            state.Pe = state.Pe + gamma * (sol.P - state.Pe);
-            if(Math.abs(sol.P - state.Pe) < 0.01) state.Pe = sol.P;
-            update();
+            if (st.horizon === 'long') {
+                // LONG RUN: Y = Yn. AD determines P.
+                // Y = term1 + term2/P => P = term2 / (Yn - term1)
+                Y_eq = Yn;
+                P_eq = term2 / (Yn - term1);
+                // Vertical AS
+                lambda = 1000; // effective vertical slope
+            } 
+            else if (st.horizon === 'short') {
+                // SHORT RUN: Horizontal AS at Pe (Sticky Price)
+                P_eq = st.Pe;
+                Y_eq = term1 + term2/P_eq;
+                lambda = 0; // Horizontal slope
+            } 
+            else {
+                // MEDIUM RUN: Upward sloping AS
+                lambda = 0.5;
+                const B_quad = st.Pe + lambda*(term1 - Yn);
+                const C_quad = -lambda * term2;
+                P_eq = (B_quad + Math.sqrt(Math.max(0, B_quad*B_quad - 4*1*C_quad))) / 2;
+                Y_eq = term1 + term2/P_eq;
+            }
+
+            return { Y: Y_eq, P: P_eq, term1, term2, Pe: st.Pe, Yn, lambda, type:'adas', horizon: st.horizon };
         },
         draw: (sol, isGhost) => {
+            // AD Curve: P = term2 / (Y - term1)
             drawCurve(y => {
                 let den = y - sol.term1;
                 return den > 0.1 ? sol.term2/den : null;
             }, isGhost?'ghost':'ad', isGhost?'AD₀':'AD₁');
-            drawCurve(y => sol.Pe + 0.5*(y - PARAMS.Yn), isGhost?'ghost':'as', isGhost?'SRAS₀':'SRAS₁');
-            drawVertical(PARAMS.Yn, '#94a3b8', 'LRAS');
+
+            // AS Curve
+            if (sol.horizon === 'long') {
+                // Vertical AS at Yn
+                drawVertical(PARAMS.Yn, isGhost?'ghost':'#f59e0b', isGhost?'LRAS₀':'LRAS₁');
+            } else {
+                // Upward or Horizontal AS
+                // P = Pe + lambda(Y - Yn)
+                drawCurve(y => sol.Pe + sol.lambda*(y - PARAMS.Yn), isGhost?'ghost':'as', isGhost?'SRAS₀':'SRAS₁');
+            }
+            
             if(!isGhost) drawDot(sol.Y, sol.P);
         },
-        explain: (sol) => `$$ P = P^e + \\lambda(Y - Y_n) \\quad [P^e = ${sol.Pe.toFixed(2)}] $$ 
+        explain: (sol) => `$$ P = P^e + \\lambda(Y - Y_n) \\quad [\\lambda=${sol.lambda}] $$ 
                            $$ Y = AD(G, M/P) $$`
     },
 
@@ -391,8 +438,7 @@ const MODELS = {
             drawVertical(sol.Un, '#3b82f6', 'LRPC');
             if(!isGhost) drawDot(sol.u, sol.Pi);
         },
-        explain: (sol) => `$$ \\pi_t = \\pi^e_{t} - \\beta(u_t - u_n) + \\nu_t $$
-                           $$ \\text{Exp: } \\pi^e_{t+1} = \\pi^e_t + \\gamma(\\pi_t - \\pi^e_t) $$`
+        explain: (sol) => `$$ \\pi_t = \\pi^e_{t} - \\beta(u_t - u_n) + \\nu_t $$`
     },
 
     solow: {
@@ -428,8 +474,7 @@ const MODELS = {
                 ctx.arc(sx, sy, 4, 0, Math.PI*2); ctx.fill();
             }
         },
-        explain: (sol) => `$$ \\Delta k = s f(k) - (\\delta + n + g)k $$
-                           $$ k^* = ${sol.k_star.toFixed(1)} \\quad (\\text{Current } k = ${sol.k_curr.toFixed(1)}) $$`
+        explain: (sol) => `$$ \\Delta k = s f(k) - (\\delta + n + g)k $$`
     },
 
     mundell: {
@@ -450,42 +495,35 @@ const MODELS = {
             const q = 2; // e sensitivity
             let Y, e, M_endo;
 
-            // 1. LM* Curve (Money Market)
-            // L(Y, r*) = M/P. Since r=r* and P=1, M determines Y directly (in Float)
-            // Y = (M + h*r*)/k.  This is a VERTICAL line in (Y, e) space.
-            
             if(st.regime === 'float') {
-                // Float: M is fixed -> Y is fixed by LM*
+                // Float: M is fixed -> Y is fixed by LM* (Vertical)
+                // Y = (M + h*r*)/k
                 M_endo = st.M;
                 Y = (M_endo + PARAMS.h*r_star) / PARAMS.k;
                 
-                // IS*: Y = Aut + X0 - q*e - Y(1-c1) ?? No
-                // IS*: Y = C(Y-T) + I(r*) + G + NX(e)
-                // Y = c0 + c1(Y-T) + I0 - b*r* + G + X0 - q*e
-                // Y(1-c1) = Aut - b*r* + X0 - q*e
+                // IS*: Y(1-c1) = Aut - b*r* + X0 - q*e
                 // q*e = Aut - b*r* + X0 - Y(1-c1)
                 e = (Aut - b*r_star + X0 - Y*(1-c1)) / q;
             } else {
-                // Fixed: e is fixed -> M must adjust
+                // Fixed: e is fixed -> IS* determines Y (Vertical LM* must shift to match)
                 e = 3.0; // Pegged rate
-                // IS determines Y directly given e
                 Y = (Aut - b*r_star + X0 - q*e) / (1-c1);
-                
-                // LM determines M to match this Y
                 M_endo = PARAMS.k*Y - PARAMS.h*r_star;
             }
+            // Capture G, T, etc. for ghost curves
             return { Y, e, r: r_star, M: M_endo, regime: st.regime, G: st.G, type:'mundell' };
         },
         draw: (sol, isGhost) => {
-            // Vertical LM*: x = Y (Draws vertical line at sol.Y)
+            // Vertical LM*: x = Y
             drawVertical(sol.Y, isGhost?'#ef4444':'#ef4444', isGhost?'LM*₀':'LM*₁');
             
-            // Downward Sloping IS*: e = (Aut... - Y(1-c1))/q
+            // Downward IS*: e = (Aut... - Y(1-c1))/q
             const q = 2;
             const { c1, c0, I0, b, X0 } = PARAMS;
+            // Use snapshot G from sol object
             const A_tot = c0 + I0 + sol.G - c1*60 + X0 - b*sol.r;
             
-            // Plot e vs Y (y-axis is e, x-axis is Y)
+            // Draw IS* in (Y, e) space
             drawCurve(y => (A_tot - y*(1-c1))/q, isGhost?'ghost':'is', isGhost?'IS*₀':'IS*₁');
             
             if(!isGhost) drawDot(sol.Y, sol.e);
@@ -576,6 +614,8 @@ function update() {
     canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
     
     const m = MODELS[state.model];
+    // Include horizon in state passed to solve
+    state.horizon = state.horizon || 'short';
     const sol = m.solve(state);
     
     // Ghost Logic
@@ -583,6 +623,10 @@ function update() {
     if(prevState) {
          const ps = JSON.parse(JSON.stringify(prevState));
          if(ps.G) ps.G = Math.min(200, Math.max(10, ps.G));
+         // Ensure ghost uses same horizon unless we want to compare horizons (advanced)
+         // For now, ghost uses its own captured horizon or current? 
+         // Better to use current horizon for ghost comparison usually, or captured.
+         ps.horizon = state.horizon; 
          prevSol = m.solve(ps);
     }
     
@@ -621,6 +665,9 @@ function stepSim() {
 function switchModel(id, btnElement) {
     state = JSON.parse(JSON.stringify(DEFAULTS[id]));
     state.model = id; 
+    // Default horizon reset
+    state.horizon = 'short';
+    
     prevState = JSON.parse(JSON.stringify(DEFAULTS[id]));
     
     document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
@@ -629,6 +676,10 @@ function switchModel(id, btnElement) {
     const hasSim = (id === 'adas' || id === 'solow' || id === 'phillips');
     document.getElementById('sim-ctrl').style.display = hasSim ? 'flex' : 'none';
     document.getElementById('horizon-ctrl').style.display = (id === 'islm' || id === 'adas') ? 'flex' : 'none';
+    
+    // Reset horizon tabs UI
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.tab-btn').classList.add('active'); // First one (Short)
     
     updateControls();
     

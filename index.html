@@ -139,7 +139,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v17.0</span>
+        MACRO SIMULATOR <span class="tag">v18.0</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -152,6 +152,7 @@
         <ul class="model-list">
             <li><button class="model-btn active" onclick="switchModel('islm')">IS-LM Model</button></li>
             <li><button class="model-btn" onclick="switchModel('adas')">AD-AS Model</button></li>
+            <li><button class="model-btn" onclick="switchModel('phillips')">Phillips Curve</button></li>
             <li><button class="model-btn" onclick="switchModel('solow')">Solow Growth</button></li>
             <li><button class="model-btn" onclick="switchModel('mundell')">Mundell-Fleming</button></li>
         </ul>
@@ -215,16 +216,17 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 /* PARAMETERS (b=10 for stability) */
-const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, m: 0.15 };
+const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, m: 0.15, beta: 1.0 };
 
 const DEFAULTS = {
     islm: { G: 75, T: 60, M: 45, isOpen: false },
     adas: { G: 60, M: 60, Pe: 1.0 },
     solow: { s: 0.3, d: 0.1, n: 0.02 },
-    mundell: { G: 60, M: 60, rs: 3.0, regime: 'float' } // regime: 'float' or 'fixed'
+    mundell: { G: 60, M: 60, rs: 3.0, regime: 'float' },
+    phillips: { Pie: 2.0, Un: 5.0, u: 5.0, shock: 0.0 }
 };
 
-let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0, isOpen: false, regime: 'float' };
+let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0, isOpen: false, regime: 'float', Pie: 2.0, Un: 5.0, u: 5.0, shock: 0.0 };
 let prevState = null;
 let view = { maxX: 350, maxY: 25 }; 
 let warningMsg = null;
@@ -250,10 +252,6 @@ const MODELS = {
             let { G, T, M, isOpen } = st;
             G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
             const { c1, c0, I0, b, k, h, Yn, m } = PARAMS;
-            
-            // OPEN ECONOMY TOGGLE LOGIC
-            // If Open, Multiplier = 1 / (1 - c1 + m)
-            // If Closed, Multiplier = 1 / (1 - c1)
             const effMult = isOpen ? 1/(1 - c1 + m) : 1/(1 - c1);
             const A = c0 + I0 + G - c1*T; 
 
@@ -269,7 +267,6 @@ const MODELS = {
                 Y = num / denom;
                 r = (k*Y - M)/h;
             }
-            
             if(r < 0.1) warningMsg = "Liquidity Trap (r ≈ 0%)";
             else if(r > 20) warningMsg = "High Interest Rate";
             else warningMsg = null;
@@ -278,11 +275,8 @@ const MODELS = {
         draw: (sol, isGhost) => {
             const style = isGhost ? 'ghost' : 'is';
             const styleLM = isGhost ? 'ghost' : 'lm';
-            // IS: r = (A - Y/mult)/b
             drawCurve(y => (sol.A - y/sol.mult)/PARAMS.b, style, isGhost?'IS₀':'IS₁');
-            // LM: r = (kY - M/P)/h
             drawCurve(y => (PARAMS.k*y - sol.M/sol.P)/PARAMS.h, styleLM, isGhost?'LM₀':'LM₁'); 
-            
             if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, getVar('--axis-line'), 'Yn');
             if(!isGhost) drawDot(sol.Y, sol.r);
         },
@@ -311,7 +305,6 @@ const MODELS = {
             const denom = h + b*k*mult;
             const term1 = (h * mult * A) / denom; 
             const term2 = (b * mult * M) / denom;
-            
             let Y, P;
             if (st.horizon === 'short') {
                 P = Pe; Y = term1 + term2/P;
@@ -339,6 +332,37 @@ const MODELS = {
             if(!isGhost) drawDot(sol.Y, sol.P);
         },
         explain: (sol) => `$$ Y = AD(P) \\text{ derived from IS-LM} $$`
+    },
+
+    phillips: {
+        name: "Phillips Curve",
+        legend: [
+            {label: 'Short-Run PC', color: '#ef4444'},
+            {label: 'Long-Run PC', color: '#3b82f6', dashed: true}
+        ],
+        scenarios: [
+            { name: "Expansionary Policy", apply: {Pie:2.0, Un:5.0, u:3.0, shock:0.0} },
+            { name: "Supply Shock (Oil)", apply: {Pie:2.0, Un:5.0, u:5.0, shock:3.0} },
+            { name: "Disinflation", apply: {Pie:0.5, Un:5.0, u:7.0, shock:0.0} },
+            { name: "Structural Reform", apply: {Pie:2.0, Un:3.5, u:3.5, shock:0.0} }
+        ],
+        solve: (st) => {
+            // Pi = Pie - beta*(u - Un) + shock
+            const { Pie, Un, u, shock } = st;
+            const beta = PARAMS.beta;
+            const Pi = Pie - beta*(u - Un) + shock;
+            return { Pi, u, Pie, Un, beta, shock, type:'phillips' };
+        },
+        draw: (sol, isGhost) => {
+            const style = isGhost ? 'ghost' : 'lm';
+            // SRPC: Pi = Pie + shock - beta(u - Un)
+            // Draw function of u (x-axis)
+            // Intercept at u=Un is Pie + shock
+            drawCurve(u => sol.Pie + sol.shock - sol.beta*(u - sol.Un), style, isGhost?'SRPC₀':'SRPC₁');
+            drawVertical(sol.Un, isGhost? getVar('--grid-line') : '#3b82f6', isGhost?'LRPC₀':'LRPC₁');
+            if(!isGhost) drawDot(sol.u, sol.Pi);
+        },
+        explain: (sol) => `$$ \\pi = \\pi_e - \\beta(u - u_n) + \\nu $$ $$ \\pi = ${sol.Pie} - 1.0(u - ${sol.Un}) + ${sol.shock} $$`
     },
 
     solow: {
@@ -381,62 +405,28 @@ const MODELS = {
         solve: (st) => {
             const { k, h, c1, I0, b, c0 } = PARAMS;
             const { M, G, T, rs, regime } = st;
-            
-            // Fixed Parameters
             const NX_aut = 10; const q = 2;
-
             let Y, e, M_eff = M;
 
             if (regime === 'float') {
-                // FLOATING: M is fixed, e adjusts
-                // 1. LM* Curve (Vertical): Y = (M/P + h*r*) / k
-                //    (Assume P=1)
                 Y = (M + h*rs) / k;
-                
-                // 2. IS* Curve: Y = Multiplier components + NX(e)
-                //    Solve for e: e = (Components - Y) / q
-                const I = I0 - b*rs;
-                const C = c0 + c1*(Y - T);
-                // IS: Y = C + I + G + NX_aut - q*e
-                // q*e = C + I + G + NX_aut - Y
+                const I = I0 - b*rs; const C = c0 + c1*(Y - T);
                 e = (C + I + G + NX_aut - Y) / q;
-
             } else {
-                // FIXED: e is fixed, M adjusts
-                // Let's fix e at a target value (e.g., 2.0)
                 e = 2.0;
-
-                // 1. IS* Curve determines Y directly because e is fixed
-                //    Y = C(Y-T) + I(r*) + G + NX(fixed_e)
-                //    Y = c0 + c1(Y-T) + I0 - b*rs + G + NX_aut - q*e
-                //    Y(1-c1) = c0 - c1T + I0 - b*rs + G + NX_aut - q*e
-                //    Y = (Components...) / (1-c1)
                 const num = c0 - c1*T + I0 - b*rs + G + NX_aut - q*e;
                 Y = num / (1 - c1);
-
-                // 2. LM* Curve adjusts: M must support this Y at r*
-                //    M/P = kY - h*rs => M = kY - h*rs
                 M_eff = k*Y - h*rs;
             }
-
             return { Y, e, M: M_eff, I_comp: (I0 - b*rs + G + NX_aut + c0 - c1*T), q, regime, type:'mundell' };
         },
         draw: (sol, isGhost) => {
             const sIS = isGhost ? 'ghost' : 'is';
-            const sLM = isGhost ? 'ghost' : 'lm';
-            
-            // Draw Vertical LM*
-            // In Fixed regime, the LM curve shifts to the new Y. In Float, it stays at M/k..
             drawVertical(sol.Y, isGhost? getVar('--border') : '#ef4444', isGhost?'LM*₀':'LM*₁'); 
-            
-            // Draw Downward Sloping IS*
-            // e = (I_comp + c1*Y - Y)/q
             drawCurve(y => (sol.I_comp + PARAMS.c1*y - y)/sol.q, sIS, isGhost?'IS*₀':'IS*₁'); 
-            
             if(!isGhost) {
                 drawDot(sol.Y, sol.e);
                 if(sol.regime === 'fixed') {
-                    // Draw horizontal line for Fixed Rate
                     const [sx, sy] = toScreen(0, sol.e);
                     ctx.save(); ctx.strokeStyle='#f59e0b'; ctx.setLineDash([2,4]);
                     ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy); ctx.stroke();
@@ -446,10 +436,8 @@ const MODELS = {
             }
         },
         explain: (sol) => {
-            if(sol.regime === 'float') 
-                return `$$ \\text{Float: } M \\text{ fixed.} \\quad e \\text{ adjusts.} $$`;
-            else 
-                return `$$ \\text{Fixed: } e=2.0. \\quad M \\text{ adjusts to } ${sol.M.toFixed(0)} $$`;
+            if(sol.regime === 'float') return `$$ \\text{Float: } M \\text{ fixed.} \\quad e \\text{ adjusts.} $$`;
+            else return `$$ \\text{Fixed: } e=2.0. \\quad M \\text{ adjusts to } ${sol.M.toFixed(0)} $$`;
         }
     }
 };
@@ -462,6 +450,7 @@ function calculateViewWindow(sol, prevSol) {
     else if (state.model === 'adas') { view.maxX = 350; view.maxY = 5.0; }
     else if (state.model === 'solow') { view.maxX = 60; view.maxY = 6; }
     else if (state.model === 'mundell') { view.maxX = 350; view.maxY = 15; }
+    else if (state.model === 'phillips') { view.maxX = 12; view.maxY = 10; } // U: 0-12%, Pi: 0-10%
 }
 
 function toScreen(x, y) {
@@ -495,6 +484,7 @@ function drawGrid() {
     else if(state.model === 'adas') yLab = "Price Level (P)";
     else if(state.model === 'mundell') yLab = "Exchange Rate (e)";
     else if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Output (y)"; }
+    else if(state.model === 'phillips') { xLab = "Unemployment (u)"; yLab = "Inflation (π)"; }
     
     ctx.fillText(xLab, w - 80, oy + 35); ctx.fillText(yLab, ox - 10, pad - 10);
     
@@ -579,7 +569,6 @@ function update() {
     let prevSol = null;
     if(prevState) {
         const safePrev = JSON.parse(JSON.stringify(prevState));
-        // Bounds checking for ghost
         if(safePrev.G) safePrev.G=Math.max(20,Math.min(150,safePrev.G));
         prevSol = m.solve(safePrev);
     }
@@ -603,6 +592,7 @@ function update() {
     if(sol.type==='islm') stats=[['Y', sol.Y.toFixed(1)], ['r', sol.r.toFixed(2)+'%']];
     else if(sol.type==='adas') stats=[['Y', sol.Y.toFixed(1)], ['P', sol.P.toFixed(2)]];
     else if(sol.type==='solow') stats=[['k*', sol.k.toFixed(1)], ['y*', sol.y.toFixed(2)]];
+    else if(sol.type==='phillips') stats=[['u', sol.u.toFixed(1)+'%'], ['π', sol.Pi.toFixed(2)+'%']];
     else stats=[['Y', sol.Y.toFixed(1)], ['e', sol.e.toFixed(2)]];
     
     document.getElementById('stats').innerHTML = stats.map(s => `
@@ -621,7 +611,8 @@ function resetModel() {
 
 const TOOLTIPS = {
     G: "Gov Spending", T: "Taxes", M: "Money Supply", Pe: "Expected Price",
-    s: "Savings Rate", d: "Depreciation", n: "Pop Growth", rs: "World Rate"
+    s: "Savings Rate", d: "Depreciation", n: "Pop Growth", rs: "World Rate",
+    Pie: "Expected Inflation", Un: "Natural Rate of U", u: "Actual U (Demand)", shock: "Supply Shock"
 };
 
 function switchModel(id) {
@@ -640,7 +631,7 @@ function switchModel(id) {
         };
         sDiv.appendChild(b);
     });
-    document.getElementById('horizon-ctrl').style.display = (id==='solow'||id==='mundell')?'none':'flex';
+    document.getElementById('horizon-ctrl').style.display = (id==='solow'||id==='mundell'||id==='phillips')?'none':'flex';
     update();
 }
 
@@ -670,11 +661,13 @@ function updateControls() {
     // 2. ADD SLIDERS
     const defs = {
         islm: ['G','T','M'], adas: ['G','M','Pe'], 
-        solow: ['s','d','n'], mundell: ['G','M','rs']
+        solow: ['s','d','n'], mundell: ['G','M','rs'],
+        phillips: ['Pie', 'Un', 'u', 'shock']
     };
     const ranges = {
         G:[20,150,1], T:[20,150,1], M:[20,150,1], Pe:[0.5,2.0,0.1],
-        s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.01], rs:[1,8,0.1]
+        s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.01], rs:[1,8,0.1],
+        Pie:[0, 10, 0.1], Un:[2, 8, 0.1], u:[0, 12, 0.1], shock:[-3, 5, 0.5]
     };
     defs[state.model].forEach(key => {
         const r = ranges[key];

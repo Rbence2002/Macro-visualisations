@@ -3,19 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MacroSim | Advanced Edition</title>
+    <title>MacroSim | Theoretical Core Update</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
-            /* Dark Mode (Default) */
             --bg-body: #0f172a; --bg-panel: #1e293b; --bg-sidebar: #020617;
             --border: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
             --accent: #6366f1; --warn: #f59e0b;
             --grid-line: #334155; --axis-line: #94a3b8;
         }
         :root.light-mode {
-            /* Light Mode */
             --bg-body: #ffffff; --bg-panel: #f8fafc; --bg-sidebar: #f1f5f9;
             --border: #cbd5e1; --text-main: #0f172a; --text-muted: #475569;
             --grid-line: #e2e8f0; --axis-line: #64748b;
@@ -70,7 +68,6 @@
         .slider-val { font-family: monospace; color: var(--accent); }
         input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
         
-        /* Toggles */
         .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding: 0 5px; }
         .toggle-label { font-size: 0.8rem; color: var(--text-main); }
         .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
@@ -86,22 +83,34 @@
             border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; text-align: center;
         }
         .scenario-btn:hover { border-color: var(--accent); color: var(--text-main); background: var(--border); }
+        
+        .action-btn {
+            width: 100%; margin-bottom: 10px; padding: 10px; background: var(--accent);
+            border: none; color: white; cursor: pointer; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 600; transition: all 0.2s;
+        }
+        .action-btn:hover { opacity: 0.9; }
         .reset-btn {
             width: calc(100% - 40px); margin: 0 20px 20px 20px; padding: 10px; background: transparent;
             border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer; border-radius: 6px;
             font-size: 0.8rem; transition: all 0.2s;
         }
         .reset-btn:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99, 102, 241, 0.1); }
+        
         .viz-panel {
             flex: 2; position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
             transition: background-color 0.3s;
         }
-        .horizon-tabs {
+        .sim-controls {
             position: absolute; top: 15px; left: 15px; z-index: 10;
-            display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border);
+            display: flex; gap: 8px;
         }
-        .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 6px 12px; font-size: 0.8rem; cursor: pointer; border-radius: 6px; }
-        .tab-btn.active { background: var(--accent); color: white; }
+        .sim-btn {
+            background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);
+            padding: 6px 12px; font-size: 0.75rem; cursor: pointer; border-radius: 6px; font-weight: 600;
+        }
+        .sim-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        
         canvas { width: 100%; height: 100%; }
         .edu-panel {
             width: 320px; background-color: var(--bg-body); border-left: 1px solid var(--border);
@@ -139,7 +148,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v18.0</span>
+        MACRO SIMULATOR <span class="tag">v19.0</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -164,23 +173,21 @@
     </nav>
 
     <main class="viz-panel">
-        <div class="horizon-tabs" id="horizon-ctrl">
-            <button class="tab-btn active" onclick="setHorizon('short')">Short Run</button>
-            <button class="tab-btn" onclick="setHorizon('medium')">Medium</button>
-            <button class="tab-btn" onclick="setHorizon('long')">Long Run</button>
+        <div class="sim-controls" id="sim-ctrl" style="display:none;">
+            <button class="sim-btn" onclick="stepSim()">▶ Evolve Expect./Capital</button>
         </div>
         <div class="stats-overlay" id="stats"></div>
-        <div class="warning-banner" id="warning">⚠️ Extreme Parameters Detected</div>
+        <div class="warning-banner" id="warning">⚠️ Parameter Warning</div>
         <canvas id="canvas"></canvas>
     </main>
 
     <aside class="edu-panel">
         <div class="edu-card">
-            <div class="edu-title">Mathematical Derivation</div>
+            <div class="edu-title">Theory & Derivation</div>
             <div class="math-block" id="math-display"></div>
         </div>
         <div class="edu-card">
-            <div class="edu-title">Analysis</div>
+            <div class="edu-title">Equilibrium Analysis</div>
             <div class="analysis-text" id="analysis-text"></div>
         </div>
         <div class="edu-card">
@@ -193,145 +200,178 @@
 
 <script>
 /* ==========================================================================
-   THEME ENGINE
+   THEME & UTILS
    ========================================================================== */
 function toggleTheme() {
     const root = document.documentElement;
     const btn = document.getElementById('theme-btn');
     if (root.classList.contains('light-mode')) {
-        root.classList.remove('light-mode');
-        btn.innerText = "☀️ Projector Mode";
+        root.classList.remove('light-mode'); btn.innerText = "☀️ Projector Mode";
     } else {
-        root.classList.add('light-mode');
-        btn.innerText = "🌙 Dark Mode";
+        root.classList.add('light-mode'); btn.innerText = "🌙 Dark Mode";
     }
     update();
 }
 function getVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 /* ==========================================================================
-   CORE ENGINE
+   GLOBAL CONSTANTS & STATE
    ========================================================================== */
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-/* PARAMETERS (b=10 for stability) */
-const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, m: 0.15, beta: 1.0 };
-
-const DEFAULTS = {
-    islm: { G: 75, T: 60, M: 45, isOpen: false },
-    adas: { G: 60, M: 60, Pe: 1.0 },
-    solow: { s: 0.3, d: 0.1, n: 0.02 },
-    mundell: { G: 60, M: 60, rs: 3.0, regime: 'float' },
-    phillips: { Pie: 2.0, Un: 5.0, u: 5.0, shock: 0.0 }
+/* ECONOMIC PARAMETERS 
+   b: Investment sensitivity (lowered to 10 for graphical stability)
+   m: Marginal propensity to import
+   beta: Phillips curve slope
+*/
+const PARAMS = { 
+    c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, 
+    m: 0.15, X0: 20, beta: 0.5, alpha: 0.33 
 };
 
-let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0, isOpen: false, regime: 'float', Pie: 2.0, Un: 5.0, u: 5.0, shock: 0.0 };
+const DEFAULTS = {
+    islm: { G: 70, T: 60, M: 50, isOpen: false }, // G adjusted for center view
+    adas: { G: 60, M: 50, Pe: 1.0, P: 1.0 },      // Added P state for adaptive exp
+    solow: { s: 0.3, d: 0.1, n: 0.02, g: 0.02, k: 20 }, // Added g, k state
+    mundell: { G: 60, M: 50, rs: 4.0, regime: 'float' },
+    phillips: { Pie: 2.0, Un: 5.0, demandGap: 0, shock: 0.0, adaptive: false }
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULTS.islm));
+state.model = 'islm';
 let prevState = null;
 let view = { maxX: 350, maxY: 25 }; 
 let warningMsg = null;
 
 /* ==========================================================================
-   MODELS
+   MODEL ENGINES
    ========================================================================== */
 const MODELS = {
     islm: {
-        name: "IS-LM",
+        name: "IS-LM (Keynesian)",
         legend: [
             {label: 'IS Curve', color: '#3b82f6'},
             {label: 'LM Curve', color: '#ef4444'},
-            {label: 'Natural Output (Yn)', color: '#94a3b8', dashed: true}
+            {label: 'Liquidity Trap', color: '#ef4444', dashed: true}
         ],
         scenarios: [
-            { name: "Fiscal Stimulus", apply: {G:115, T:60, M:45} },
-            { name: "Fiscal Austerity", apply: {G:40, T:60, M:45} },
-            { name: "Monetary Exp.", apply: {G:75, T:60, M:85} },
-            { name: "Monetary Tight.", apply: {G:75, T:60, M:25} }
+            { name: "Fiscal Stimulus", apply: {G:120} },
+            { name: "Monetary Tightening", apply: {M:25} },
+            { name: "Liquidity Trap Case", apply: {M:120, G:30} }
         ],
         solve: (st) => {
             let { G, T, M, isOpen } = st;
-            G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
-            const { c1, c0, I0, b, k, h, Yn, m } = PARAMS;
-            const effMult = isOpen ? 1/(1 - c1 + m) : 1/(1 - c1);
-            const A = c0 + I0 + G - c1*T; 
-
-            let Y, r, P = 1.0;
-            if (st.horizon === 'long') {
-                Y = Yn;
-                r = (A - Y/effMult) / b;
-                const L = k*Y - h*r;
-                P = L > 0.1 ? M / L : M / 0.1;
-            } else {
-                const denom = 1 + (effMult * b * k) / h;
-                const num = effMult * (A + (b * M)/h);
-                Y = num / denom;
-                r = (k*Y - M)/h;
+            G=Math.min(200,Math.max(10,G)); M=Math.max(10,M);
+            
+            // IS Curve: Y = Multiplier * (Autonomous - b*r)
+            // Closed: Mult = 1/(1-c1). Open: Mult = 1/(1-c1+m) with NX leakage
+            const { c1, c0, I0, b, m, X0 } = PARAMS;
+            const mult = isOpen ? 1/(1 - c1 + m) : 1/(1 - c1);
+            const Aut = c0 + I0 + G - c1*T + (isOpen ? X0 : 0);
+            
+            // LM Curve: r = max(0.1, (kY - M)/h)  <-- LIQUIDITY TRAP LOGIC
+            // To solve Equilibrium: Substitute r in IS. 
+            // Case 1: Normal. r = (kY - M)/h
+            // Y = mult(Aut - b((kY-M)/h)) => Y(1 + mult*b*k/h) = mult(Aut + bM/h)
+            const denom = 1 + (mult * b * PARAMS.k) / PARAMS.h;
+            const num = mult * (Aut + (b * M)/PARAMS.h);
+            let Y = num / denom;
+            let r = (PARAMS.k*Y - M)/PARAMS.h;
+            
+            // Case 2: Trap Check. If calc r < 0.1, set r=0.1 and solve IS for Y
+            if(r < 0.1) {
+                r = 0.1;
+                Y = mult * (Aut - b*r);
+                warningMsg = "Liquidity Trap: Mon. Policy Ineffective";
             }
-            if(r < 0.1) warningMsg = "Liquidity Trap (r ≈ 0%)";
-            else if(r > 20) warningMsg = "High Interest Rate";
-            else warningMsg = null;
-            return { Y, r, P, A, M, mult: effMult, type:'islm' };
+            
+            return { Y, r, Aut, mult, M, type: 'islm' };
         },
         draw: (sol, isGhost) => {
-            const style = isGhost ? 'ghost' : 'is';
-            const styleLM = isGhost ? 'ghost' : 'lm';
-            drawCurve(y => (sol.A - y/sol.mult)/PARAMS.b, style, isGhost?'IS₀':'IS₁');
-            drawCurve(y => (PARAMS.k*y - sol.M/sol.P)/PARAMS.h, styleLM, isGhost?'LM₀':'LM₁'); 
-            if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, getVar('--axis-line'), 'Yn');
+            const sIS = isGhost ? 'ghost' : 'is';
+            const sLM = isGhost ? 'ghost' : 'lm';
+            
+            // Draw IS
+            drawCurve(y => (sol.Aut - y/sol.mult)/PARAMS.b, sIS, isGhost?'IS₀':'IS₁');
+            
+            // Draw Piecewise LM
+            // Flat at 0.1% until Y = (M + h*0.1)/k, then upward sloping
+            const kinkY = (sol.M + PARAMS.h*0.1)/PARAMS.k;
+            drawCurve(y => {
+                if(y < kinkY) return 0.1;
+                return (PARAMS.k*y - sol.M)/PARAMS.h;
+            }, sLM, isGhost?'LM₀':'LM₁');
+            
             if(!isGhost) drawDot(sol.Y, sol.r);
         },
-        explain: (sol) => {
-            const mText = state.isOpen ? " (Open: leaks to imports)" : " (Closed)";
-            return `$$ \\text{Mult} = ${sol.mult.toFixed(2)} ${mText} $$ $$ IS: Y = ${sol.mult.toFixed(2)}(A - ${PARAMS.b}r) $$`;
-        }
+        explain: (sol) => `$$ IS: Y = ${sol.mult.toFixed(2)}(A - ${PARAMS.b}r) \\quad [NX = ${state.isOpen?'X_0 - mY':0}] $$
+                           $$ LM: r = \\max(0.1\\%, \\frac{kY - M}{h}) $$`
     },
 
     adas: {
-        name: "AD-AS",
+        name: "AD-AS (Dynamic)",
         legend: [
             {label: 'AD Curve', color: '#10b981'},
-            {label: 'AS Curve', color: '#f59e0b'},
-            {label: 'LRAS', color: '#f59e0b', dashed: true}
+            {label: 'SRAS Curve', color: '#f59e0b'},
+            {label: 'LRAS (Yn)', color: '#94a3b8', dashed: true}
         ],
         scenarios: [
-            { name: "Demand Boom", apply: {G:110, M:70, Pe:1.0} },
-            { name: "Supply Shock", apply: {G:60, M:60, Pe:1.6} }
+            { name: "Demand Shock", apply: {G:100} },
+            { name: "Supply Shock", apply: {Pe: 2.0} } // Sets initial expectation higher
         ],
         solve: (st) => {
+            // AD derived from IS-LM (Closed for simplicity here)
+            // Y = AD(P). From IS-LM: Y = (mult*A + mult*b*M/h*P) / (1 + ...)
+            // Simplified AD: Y = Y_aut + alpha * (M/P)
             const { c1, c0, I0, b, k, h, Yn } = PARAMS;
-            const { G, T, M, Pe } = st;
-            const mult = 1 / (1 - c1);
-            const A = c0 + I0 + G - c1*T;
-            const denom = h + b*k*mult;
-            const term1 = (h * mult * A) / denom; 
-            const term2 = (b * mult * M) / denom;
-            let Y, P;
-            if (st.horizon === 'short') {
-                P = Pe; Y = term1 + term2/P;
-            } else if (st.horizon === 'long') {
-                Y = Yn; P = term2 / Math.max(0.1, Y - term1);
-            } else {
-                const lambda = 0.5; const a = lambda;
-                const b_q = Pe - lambda*Yn - term1*lambda;
-                const c_q = -term1*(Pe - lambda*Yn) - term2;
-                const det = Math.sqrt(Math.max(0, b_q*b_q - 4*a*c_q));
-                Y = (-b_q + det)/(2*a); P = Pe + lambda*(Y - Yn);
-            }
-            return { Y, P, term1, term2, Pe, type:'adas' };
+            const mult = 1/(1-c1);
+            const Aut = c0 + I0 + st.G - c1*DEFAULTS.islm.T; // Use fixed T
+            
+            // Reduced form AD coefficients
+            const theta = (h + b*k*mult); 
+            const term1 = (h * mult * Aut) / theta; // Autonomous part
+            const term2 = (b * mult * st.M) / theta; // Monetary part
+            
+            // SRAS: P = Pe + lambda(Y - Yn)  => Y = Yn + (P - Pe)/lambda
+            const lambda = 0.5;
+            
+            // Solve System: P = Pe + lambda( (term1 + term2/P) - Yn )
+            // This is quadratic in P.
+            // lambda*term2/P + (lambda*(term1-Yn) + Pe) - P = 0
+            // Rearrange: P^2 - P(Pe + lambda(term1-Yn)) - lambda*term2 = 0
+            const B_quad = st.Pe + lambda*(term1 - Yn);
+            const C_quad = -lambda * term2;
+            const P_eq = (B_quad + Math.sqrt(B_quad*B_quad - 4*1*C_quad)) / 2;
+            const Y_eq = term1 + term2/P_eq;
+
+            return { Y: Y_eq, P: P_eq, term1, term2, Pe: st.Pe, type:'adas' };
+        },
+        step: () => {
+            // Adaptive Expectations: Pe_new = Pe_old + gamma(P_actual - Pe_old)
+            const sol = MODELS.adas.solve(state);
+            const gamma = 0.5; // Speed of adjustment
+            state.Pe = state.Pe + gamma * (sol.P - state.Pe);
+            // Stop jitter if close
+            if(Math.abs(sol.P - state.Pe) < 0.01) state.Pe = sol.P;
+            update();
         },
         draw: (sol, isGhost) => {
-            const sAD = isGhost ? 'ghost' : 'ad';
-            const sAS = isGhost ? 'ghost' : 'as';
+            // Draw AD: P vs Y (inverted for drawing y=f(x))
+            // P = term2 / (Y - term1)
             drawCurve(y => {
-                let den = y - sol.term1; if(den < sol.term1 * 0.01) return null;
-                const val = sol.term2 / den; return (val > 0 && val < view.maxY*1.5) ? val : null;
-            }, sAD, isGhost?'AD₀':'AD₁'); 
-            if(state.horizon === 'short') drawCurve(y => sol.Pe, sAS, isGhost?'SRAS₀':'SRAS₁');
-            else if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#fbbf24', 'LRAS');
-            else if(state.horizon === 'medium') drawCurve(y => sol.Pe + 0.5*(y-PARAMS.Yn), sAS, isGhost?'AS₀':'AS₁');
+                let den = y - sol.term1;
+                return den > 0.1 ? sol.term2/den : null;
+            }, isGhost?'ghost':'ad', isGhost?'AD₀':'AD₁');
+            
+            // Draw SRAS: P = Pe + lambda(Y - Yn)
+            drawCurve(y => sol.Pe + 0.5*(y - PARAMS.Yn), isGhost?'ghost':'as', isGhost?'SRAS₀':'SRAS₁');
+            
+            drawVertical(PARAMS.Yn, '#94a3b8', 'LRAS');
             if(!isGhost) drawDot(sol.Y, sol.P);
         },
-        explain: (sol) => `$$ Y = AD(P) \\text{ derived from IS-LM} $$`
+        explain: (sol) => `$$ P = P^e + \\lambda(Y - Y_n) \\quad [P^e = ${sol.Pe.toFixed(2)}] $$ 
+                           $$ Y = AD(G, M/P) $$`
     },
 
     phillips: {
@@ -341,116 +381,173 @@ const MODELS = {
             {label: 'Long-Run PC', color: '#3b82f6', dashed: true}
         ],
         scenarios: [
-            { name: "Expansionary Policy", apply: {Pie:2.0, Un:5.0, u:3.0, shock:0.0} },
-            { name: "Supply Shock (Oil)", apply: {Pie:2.0, Un:5.0, u:5.0, shock:3.0} },
-            { name: "Disinflation", apply: {Pie:0.5, Un:5.0, u:7.0, shock:0.0} },
-            { name: "Structural Reform", apply: {Pie:2.0, Un:3.5, u:3.5, shock:0.0} }
+            { name: "Demand Boom", apply: {demandGap: 3.0} },
+            { name: "Supply Shock", apply: {shock: 2.0} }
         ],
         solve: (st) => {
-            // Pi = Pie - beta*(u - Un) + shock
-            const { Pie, Un, u, shock } = st;
-            const beta = PARAMS.beta;
-            const Pi = Pie - beta*(u - Un) + shock;
-            return { Pi, u, Pie, Un, beta, shock, type:'phillips' };
+            // 1. Determine U from Demand Gap (Okun's Law Proxy)
+            // u = Un - 0.5 * (Y_gap)
+            // User controls 'demandGap' directly for pedagogical clarity
+            const u = st.Un - 0.5 * st.demandGap;
+            
+            // 2. Phillips Curve
+            // pi = Pie - beta(u - Un) + shock
+            const Pi = st.Pie - PARAMS.beta*(u - st.Un) + st.shock;
+            
+            return { u, Pi, Pie: st.Pie, Un: st.Un, type:'phillips' };
+        },
+        step: () => {
+            if(state.adaptive) {
+                // Adaptive: Pie_new = Pi_actual (Lagged inflation)
+                const sol = MODELS.phillips.solve(state);
+                state.Pie = sol.Pi;
+                update();
+            }
         },
         draw: (sol, isGhost) => {
-            const style = isGhost ? 'ghost' : 'lm';
-            // SRPC: Pi = Pie + shock - beta(u - Un)
-            // Draw function of u (x-axis)
-            // Intercept at u=Un is Pie + shock
-            drawCurve(u => sol.Pie + sol.shock - sol.beta*(u - sol.Un), style, isGhost?'SRPC₀':'SRPC₁');
-            drawVertical(sol.Un, isGhost? getVar('--grid-line') : '#3b82f6', isGhost?'LRPC₀':'LRPC₁');
+            // PC: Pi = (Pie + shock + beta*Un) - beta*u
+            const intercept = sol.Pie + state.shock + PARAMS.beta*sol.Un;
+            drawCurve(u => intercept - PARAMS.beta*u, isGhost?'ghost':'lm', isGhost?'PC₀':'PC₁');
+            drawVertical(sol.Un, '#3b82f6', 'LRPC');
             if(!isGhost) drawDot(sol.u, sol.Pi);
         },
-        explain: (sol) => `$$ \\pi = \\pi_e - \\beta(u - u_n) + \\nu $$ $$ \\pi = ${sol.Pie} - 1.0(u - ${sol.Un}) + ${sol.shock} $$`
+        explain: (sol) => `$$ \\pi_t = \\pi^e_{t} - \\beta(u_t - u_n) + \\nu_t $$
+                           $$ \\text{Exp: } ${state.adaptive ? "\\pi^e_t = \\pi_{t-1} (Adaptive)" : "\\pi^e = \\bar{\\pi} (Static)"} $$`
     },
 
     solow: {
-        name: "Solow",
+        name: "Solow-Swan",
         legend: [
-            {label: 'f(k)', color: '#3b82f6'}, {label: 'sf(k)', color: '#10b981'}, {label: '(δ+n)k', color: '#ef4444'}
+            {label: 'Investment sf(k)', color: '#10b981'},
+            {label: 'Break-even (δ+n+g)k', color: '#ef4444'}
         ],
         scenarios: [
-            { name: "Inv. Boost", apply: {s:0.5, d:0.1, n:0.02} },
-            { name: "Pop. Boom", apply: {s:0.3, d:0.1, n:0.08} }
+            { name: "Savings Boom", apply: {s: 0.5} },
+            { name: "Tech Growth", apply: {g: 0.05} }
         ],
         solve: (st) => {
-            const { s, d, n } = st; const alpha = 0.33; const effDep = d + n;
-            const k_star = Math.pow(s/effDep, 1/(1-alpha)); const y_star = Math.pow(k_star, alpha);
-            return { k: k_star, y: y_star, effDep, s, type:'solow' };
+            // Steady State Calculation
+            // sf(k) = (d + n + g)k  => s k^alpha = effDep * k
+            // k^(alpha-1) = effDep/s => k* = (s/effDep)^(1/(1-alpha))
+            const effDep = st.d + st.n + st.g;
+            const k_star = Math.pow(st.s/effDep, 1/(1-PARAMS.alpha));
+            
+            // Actual current y based on state.k (for dynamics)
+            const y_curr = Math.pow(st.k, PARAMS.alpha);
+            
+            return { k_star, effDep, k_curr: st.k, y_curr, type:'solow' };
+        },
+        step: () => {
+            // Capital Accumulation: dk = s*y - (d+n+g)k
+            const sol = MODELS.solow.solve(state);
+            const dk = state.s * sol.y_curr - sol.effDep * state.k;
+            state.k += dk * 1.5; // Speed multiplier
+            update();
         },
         draw: (sol, isGhost) => {
-            const alpha = 0.33;
+            // Investment Curve: s * k^alpha
+            drawCurve(k => state.s * Math.pow(k, PARAMS.alpha), isGhost?'ghost':'ad', 'sf(k)');
+            // Break-even Line: (d+n+g)k
+            drawCurve(k => sol.effDep * k, isGhost?'ghost':'lm', '(δ+n+g)k');
+            
+            // Draw current K (Dynamic)
             if(!isGhost) {
-                drawCurve(k => Math.pow(k, alpha), 'is', 'y=f(k)');
-                drawCurve(k => sol.effDep * k, 'lm', '(δ+n)k');
+                drawDot(sol.k_curr, state.s * Math.pow(sol.k_curr, PARAMS.alpha));
+                // Draw Steady State phantom
+                const y_star = state.s * Math.pow(sol.k_star, PARAMS.alpha);
+                ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); 
+                const [sx, sy] = toScreen(sol.k_star, y_star);
+                ctx.arc(sx, sy, 4, 0, Math.PI*2); ctx.fill();
             }
-            drawCurve(k => sol.s * Math.pow(k, alpha), isGhost?'ghost':'ad', isGhost?'i₀':'i₁');
-            if(!isGhost) drawDot(sol.k, sol.s * Math.pow(sol.k, alpha));
         },
-        explain: (sol) => `$$ i = s k^\\alpha \\quad i = (\\delta+n)k $$`
+        explain: (sol) => `$$ \\Delta k = s f(k) - (\\delta + n + g)k $$
+                           $$ k^* = ${sol.k_star.toFixed(1)} \\quad (\\text{Current } k = ${sol.k_curr.toFixed(1)}) $$`
     },
 
     mundell: {
-        name: "Mundell-Fleming",
+        name: "Mundell-Fleming (SOE)",
         legend: [
             {label: 'IS* Curve', color: '#3b82f6'},
-            {label: 'LM* Curve', color: '#ef4444'}
+            {label: 'LM* Curve (r=r*)', color: '#ef4444'}
         ],
         scenarios: [
-            { name: "Fiscal Exp", apply: {G:100, M:60, rs:3.0} },
-            { name: "Monetary Exp", apply: {G:60, M:100, rs:3.0} },
-            { name: "Risk Premium", apply: {G:60, M:60, rs:7.0} }
+            { name: "Fiscal Exp. (Float)", apply: {G:100, regime:'float'} },
+            { name: "Fiscal Exp. (Fixed)", apply: {G:100, regime:'fixed'} }
         ],
         solve: (st) => {
-            const { k, h, c1, I0, b, c0 } = PARAMS;
-            const { M, G, T, rs, regime } = st;
-            const NX_aut = 10; const q = 2;
-            let Y, e, M_eff = M;
+            // IS: Y = C(Y-T) + I(r*) + G + NX(e)
+            // In linear form: Y(1-c1) = Aut - b*r* + NX_aut - q*e
+            // Solve for e (Float) or Y (Fixed)
+            
+            const { c1, c0, I0, b, X0 } = PARAMS;
+            const Aut = c0 + I0 + st.G - c1*DEFAULTS.islm.T;
+            const r_star = st.rs; 
+            const q = 2; // Exchange rate sensitivity
+            
+            let Y, e, M_endo;
 
-            if (regime === 'float') {
-                Y = (M + h*rs) / k;
-                const I = I0 - b*rs; const C = c0 + c1*(Y - T);
-                e = (C + I + G + NX_aut - Y) / q;
+            if(st.regime === 'float') {
+                // Float: M is exogenous. LM determines Y.
+                // LM: M/P = kY - h*r* => Y = (M + h*r*)/k
+                Y = (st.M + PARAMS.h*r_star) / PARAMS.k;
+                
+                // IS determines e given Y
+                // Y(1-c1) = Aut - b*r* + X0 - q*e
+                // q*e = Aut - b*r* + X0 - Y(1-c1)
+                e = (Aut - b*r_star + X0 - Y*(1-c1)) / q;
+                M_endo = st.M;
             } else {
-                e = 2.0;
-                const num = c0 - c1*T + I0 - b*rs + G + NX_aut - q*e;
-                Y = num / (1 - c1);
-                M_eff = k*Y - h*rs;
+                // Fixed: e is fixed. IS determines Y.
+                e = 3.0; // Pegged rate
+                // Y(1-c1) = Aut - b*r* + X0 - q*e
+                Y = (Aut - b*r_star + X0 - q*e) / (1-c1);
+                
+                // LM determines M endogenously
+                M_endo = PARAMS.k*Y - PARAMS.h*r_star;
             }
-            return { Y, e, M: M_eff, I_comp: (I0 - b*rs + G + NX_aut + c0 - c1*T), q, regime, type:'mundell' };
+
+            return { Y, e, r: r_star, M: M_endo, regime: st.regime, type:'mundell' };
         },
         draw: (sol, isGhost) => {
-            const sIS = isGhost ? 'ghost' : 'is';
-            drawVertical(sol.Y, isGhost? getVar('--border') : '#ef4444', isGhost?'LM*₀':'LM*₁'); 
-            drawCurve(y => (sol.I_comp + PARAMS.c1*y - y)/sol.q, sIS, isGhost?'IS*₀':'IS*₁'); 
-            if(!isGhost) {
-                drawDot(sol.Y, sol.e);
-                if(sol.regime === 'fixed') {
-                    const [sx, sy] = toScreen(0, sol.e);
-                    ctx.save(); ctx.strokeStyle='#f59e0b'; ctx.setLineDash([2,4]);
-                    ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy); ctx.stroke();
-                    ctx.fillStyle='#f59e0b'; ctx.fillText("Pegged Rate", 10, sy-5);
-                    ctx.restore();
-                }
-            }
+            // Draw horizontal LM* at r = r*
+            drawCurve(y => sol.r, isGhost?'ghost':'lm', isGhost?'LM*₀':'LM*₁');
+            
+            // Draw downward IS* in (Y, r) space? 
+            // PROBLEM: MF is usually plotted Y vs e or Y vs r.
+            // Standard text (Mankiw) plots Y vs e.
+            // But our canvas engine is set up for Y vs "Value".
+            // Let's plot Y vs r (IS-LM diagram) but with Horizontal LM*.
+            // The IS curve shifts depending on e.
+            
+            // Re-calc IS curve for drawing: r = (Aut + NX(e) - Y(1-c1))/b
+            const q = 2;
+            const NX_val = PARAMS.X0 - q*sol.e;
+            const { c1, c0, I0, b } = PARAMS;
+            const A_total = c0 + I0 + state.G - c1*60 + NX_val; // approx A
+            
+            drawCurve(y => (A_total - y*(1-c1))/b, isGhost?'ghost':'is', isGhost?'IS*₀':'IS*₁');
+            
+            if(!isGhost) drawDot(sol.Y, sol.r);
         },
         explain: (sol) => {
-            if(sol.regime === 'float') return `$$ \\text{Float: } M \\text{ fixed.} \\quad e \\text{ adjusts.} $$`;
-            else return `$$ \\text{Fixed: } e=2.0. \\quad M \\text{ adjusts to } ${sol.M.toFixed(0)} $$`;
+            const effect = sol.regime === 'float' 
+                ? "Crowding Out via Apprec." 
+                : "Monetary Accomodation";
+            return `$$ r = r^* = ${sol.r}\\% \\quad (${sol.regime.toUpperCase()}) $$
+                    $$ e = ${sol.e.toFixed(2)} \\quad Y = ${sol.Y.toFixed(1)} $$`;
         }
     }
 };
 
 /* ==========================================================================
-   VIEW ENGINE
+   VIEW & CONTROLS
    ========================================================================== */
-function calculateViewWindow(sol, prevSol) {
-    if(state.model === 'islm') { view.maxX = 350; view.maxY = 25; } 
-    else if (state.model === 'adas') { view.maxX = 350; view.maxY = 5.0; }
-    else if (state.model === 'solow') { view.maxX = 60; view.maxY = 6; }
-    else if (state.model === 'mundell') { view.maxX = 350; view.maxY = 15; }
-    else if (state.model === 'phillips') { view.maxX = 12; view.maxY = 10; } // U: 0-12%, Pi: 0-10%
+function calculateViewWindow(sol) {
+    // Custom Viewports
+    if(sol.type === 'solow') { view.maxX = 60; view.maxY = 6; }
+    else if(sol.type === 'phillips') { view.maxX = 12; view.maxY = 10; } // u vs pi
+    else if(sol.type === 'adas') { view.maxX = 300; view.maxY = 5; }
+    else { view.maxX = 350; view.maxY = 15; } // ISLM / MF
 }
 
 function toScreen(x, y) {
@@ -458,45 +555,6 @@ function toScreen(x, y) {
     const sX = pad + (x / view.maxX) * (w - 2*pad);
     const sY = (h - pad) - (y / view.maxY) * (h - 2*pad);
     return [sX, sY];
-}
-
-function drawGrid() {
-    const pad = 60; const w = canvas.width; const h = canvas.height;
-    ctx.save(); ctx.beginPath(); ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
-    ctx.strokeStyle = getVar('--grid-line'); ctx.lineWidth = 0.5; ctx.beginPath();
-    for(let i=0; i<=10; i++) {
-        const val = (i/10) * view.maxX; const [sx, sy] = toScreen(val, 0);
-        ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
-    }
-    for(let i=0; i<=10; i++) {
-        const val = (i/10) * view.maxY; const [sx, sy] = toScreen(0, val);
-        ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy);
-    }
-    ctx.stroke(); ctx.restore();
-
-    const [ox, oy] = toScreen(0,0);
-    ctx.strokeStyle = getVar('--axis-line'); ctx.lineWidth = 2; ctx.beginPath();
-    ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad); ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy); ctx.stroke();
-
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = getVar('--text-main');
-    let xLab = "Output (Y)", yLab = "Value";
-    if(state.model === 'islm') yLab = "Interest Rate (r)";
-    else if(state.model === 'adas') yLab = "Price Level (P)";
-    else if(state.model === 'mundell') yLab = "Exchange Rate (e)";
-    else if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Output (y)"; }
-    else if(state.model === 'phillips') { xLab = "Unemployment (u)"; yLab = "Inflation (π)"; }
-    
-    ctx.fillText(xLab, w - 80, oy + 35); ctx.fillText(yLab, ox - 10, pad - 10);
-    
-    ctx.fillStyle = getVar('--text-muted'); ctx.font = '10px monospace';
-    for(let i=1; i<=10; i+=2) {
-        const val = (i/10) * view.maxX; const [sx, sy] = toScreen(val, 0);
-        if(sx < w-pad) ctx.fillText(Math.round(val), sx-10, oy+20);
-    }
-    for(let i=1; i<=10; i+=2) {
-        const val = (i/10) * view.maxY; const [sx, sy] = toScreen(0, val);
-        if(sy > pad) ctx.fillText(val.toFixed(1), ox-35, sy+4);
-    }
 }
 
 function drawCurve(func, style, label) {
@@ -507,118 +565,113 @@ function drawCurve(func, style, label) {
     ctx.lineWidth = style === 'ghost' ? 2 : 3;
     if(style === 'ghost') ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
     
-    let lastX, lastY; let start = true;
-    const samples = 400; const mathStep = view.maxX / samples;
-    
-    for(let i = 0; i <= samples; i++) {
-        const mathX = i * mathStep; const mathY = func(mathX);
-        if(mathY === null || !isFinite(mathY)) { start=true; continue; }
-        if(mathY < -view.maxY*0.1 || mathY > view.maxY*1.2) { start=true; continue; }
-        const [sx, sy] = toScreen(mathX, mathY);
+    let start = true;
+    for(let i = 0; i <= 400; i++) {
+        const x = (i/400) * view.maxX;
+        const y = func(x);
+        if(y === null || !isFinite(y) || y < -5 || y > view.maxY*1.5) { start=true; continue; }
+        const [sx, sy] = toScreen(x, y);
         if(start) { ctx.moveTo(sx, sy); start=false; } else ctx.lineTo(sx, sy);
-        lastX = sx; lastY = sy;
     }
-    ctx.stroke();
-    
-    if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-        const m = ctx.measureText(label);
-        ctx.fillStyle = getVar('--bg-body'); ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
-        ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; ctx.fillText(label, lastX+8, lastY);
-    }
-    ctx.restore();
-}
-
-function drawVertical(val, color, label) {
-    const pad = 60; const [sx, sy] = toScreen(val, 0);
-    ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
-    ctx.beginPath(); ctx.setLineDash([5,5]); ctx.strokeStyle = color;
-    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height); ctx.stroke();
-    if(label) { ctx.fillStyle=color; ctx.fillText(label, sx+5, pad+15); }
-    ctx.restore();
+    ctx.stroke(); ctx.restore();
 }
 
 function drawDot(x, y) {
-    const pad = 60; const [sx, sy] = toScreen(x, y);
-    if(sx < pad || sx > canvas.width-pad || sy < pad || sy > canvas.height-pad) return;
-    ctx.fillStyle = getVar('--bg-body'); ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = getVar('--text-main'); ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
-    const [ox, oy] = toScreen(0,0);
-    ctx.strokeStyle = getVar('--text-muted'); ctx.lineWidth=1; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ox, sy); ctx.stroke();
+    const [sx, sy] = toScreen(x, y);
+    ctx.fillStyle = getVar('--bg-body'); ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = getVar('--text-main'); ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI*2); ctx.fill();
+}
+
+function drawVertical(val, color, label) {
+    const [sx, sy] = toScreen(val, 0);
+    ctx.save(); ctx.beginPath(); ctx.rect(60,60,canvas.width-120,canvas.height-120); ctx.clip();
+    ctx.setLineDash([5,5]); ctx.strokeStyle = color;
+    ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height); ctx.stroke();
     ctx.restore();
 }
 
-function updateLegend() {
-    const m = MODELS[state.model];
-    document.getElementById('legend-content').innerHTML = m.legend.map(i => `
-        <div class="legend-item"><div class="legend-line" style="background:${i.color}; border-bottom:${i.dashed?'2px dashed':'none'}"></div>${i.label}</div>
-    `).join('');
+function drawGrid() {
+    const pad = 60; const w = canvas.width; const h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    
+    // Axes
+    const [ox, oy] = toScreen(0,0);
+    ctx.strokeStyle = getVar('--axis-line'); ctx.lineWidth = 2; 
+    ctx.beginPath(); ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad); ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy); ctx.stroke();
+    
+    // Labels
+    ctx.fillStyle = getVar('--text-main'); ctx.font = "bold 12px sans-serif";
+    let xL="Output (Y)", yL="Interest Rate (r)";
+    if(state.model === 'adas') yL = "Price Level (P)";
+    if(state.model === 'phillips') { xL="Unemployment (u)"; yL="Inflation (π)"; }
+    if(state.model === 'solow') { xL="Capital (k)"; yL="Output (y)"; }
+    
+    ctx.fillText(xL, w-80, oy+35); ctx.fillText(yL, ox-10, pad-10);
 }
 
 /* ==========================================================================
-   CONTROLS & LOGIC
+   APP LOGIC
    ========================================================================== */
 function update() {
     canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
-    const m = MODELS[state.model];
     
-    // Ghost Logic (Safe Copy)
+    const m = MODELS[state.model];
+    const sol = m.solve(state);
+    
     let prevSol = null;
     if(prevState) {
-        const safePrev = JSON.parse(JSON.stringify(prevState));
-        if(safePrev.G) safePrev.G=Math.max(20,Math.min(150,safePrev.G));
-        prevSol = m.solve(safePrev);
+         // Safe copy for ghost
+         const ps = JSON.parse(JSON.stringify(prevState));
+         // Enforce bounds on ghost too
+         if(ps.G) ps.G = Math.min(200, Math.max(10, ps.G));
+         prevSol = m.solve(ps);
     }
-    const sol = m.solve(state);
-
-    const wBanner = document.getElementById('warning');
-    if(warningMsg) { wBanner.innerText = warningMsg; wBanner.style.display = 'block'; }
-    else { wBanner.style.display = 'none'; }
-
-    calculateViewWindow(sol, prevSol);
-    ctx.clearRect(0,0,canvas.width, canvas.height);
+    
+    calculateViewWindow(sol);
     drawGrid();
     if(prevSol) m.draw(prevSol, true);
     m.draw(sol, false);
-
-    document.getElementById('math-display').innerHTML = m.explain(sol);
-    document.getElementById('analysis-text').innerText = `${m.name} Analysis: Compare initial (dashed) vs current state.`;
-    updateLegend();
-
-    let stats = [];
-    if(sol.type==='islm') stats=[['Y', sol.Y.toFixed(1)], ['r', sol.r.toFixed(2)+'%']];
-    else if(sol.type==='adas') stats=[['Y', sol.Y.toFixed(1)], ['P', sol.P.toFixed(2)]];
-    else if(sol.type==='solow') stats=[['k*', sol.k.toFixed(1)], ['y*', sol.y.toFixed(2)]];
-    else if(sol.type==='phillips') stats=[['u', sol.u.toFixed(1)+'%'], ['π', sol.Pi.toFixed(2)+'%']];
-    else stats=[['Y', sol.Y.toFixed(1)], ['e', sol.e.toFixed(2)]];
     
-    document.getElementById('stats').innerHTML = stats.map(s => `
-        <div class="stat-box"><div class="stat-label">${s[0]}</div><div class="stat-num">${s[1]}</div></div>
-    `).join('');
-    if(window.MathJax) MathJax.typesetPromise();
+    // Update text
+    document.getElementById('math-display').innerHTML = m.explain(sol);
+    document.getElementById('analysis-text').innerText = warningMsg || "Parameters within normal bounds.";
+    if(warningMsg) document.getElementById('warning').style.display = 'block';
+    else document.getElementById('warning').style.display = 'none';
     warningMsg = null;
+    
+    // Legend
+    document.getElementById('legend-content').innerHTML = m.legend.map(i => 
+        `<div class="legend-item"><div class="legend-line" style="background:${i.color}; border-bottom:${i.dashed?'2px dashed':'none'}"></div>${i.label}</div>`
+    ).join('');
+    
+    // Stats
+    let stats = [];
+    if(sol.type === 'phillips') stats = [['u', sol.u.toFixed(1)+'%'], ['π', sol.Pi.toFixed(2)+'%']];
+    else if(sol.type === 'solow') stats = [['k', sol.k_curr.toFixed(1)], ['y', sol.y_curr.toFixed(2)]];
+    else stats = [['Y', sol.Y.toFixed(1)], ['r', (sol.r||state.rs).toFixed(2)+'%']];
+    
+    document.getElementById('stats').innerHTML = stats.map(s => 
+        `<div class="stat-box"><div class="stat-label">${s[0]}</div><div class="stat-num">${s[1]}</div></div>`
+    ).join('');
+    
+    if(window.MathJax) MathJax.typesetPromise();
 }
 
-function resetModel() {
-    if(DEFAULTS[state.model]) {
-        state = { ...state, ...DEFAULTS[state.model] };
-        prevState = null; updateControls(); update();
-    }
+function stepSim() {
+    if(MODELS[state.model].step) MODELS[state.model].step();
 }
-
-const TOOLTIPS = {
-    G: "Gov Spending", T: "Taxes", M: "Money Supply", Pe: "Expected Price",
-    s: "Savings Rate", d: "Depreciation", n: "Pop Growth", rs: "World Rate",
-    Pie: "Expected Inflation", Un: "Natural Rate of U", u: "Actual U (Demand)", shock: "Supply Shock"
-};
 
 function switchModel(id) {
+    state = JSON.parse(JSON.stringify(DEFAULTS[id]));
     state.model = id; prevState = null;
+    
     document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
+    
+    // Show/Hide Sim Button
+    const hasSim = (id === 'adas' || id === 'solow' || id === 'phillips');
+    document.getElementById('sim-ctrl').style.display = hasSim ? 'flex' : 'none';
+    
     updateControls();
     
     const sDiv = document.getElementById('scenarios'); sDiv.innerHTML = '';
@@ -631,68 +684,55 @@ function switchModel(id) {
         };
         sDiv.appendChild(b);
     });
-    document.getElementById('horizon-ctrl').style.display = (id==='solow'||id==='mundell'||id==='phillips')?'none':'flex';
     update();
 }
 
 function updateControls() {
     const cDiv = document.getElementById('controls'); cDiv.innerHTML = '';
     
-    // 1. ADD TOGGLES IF APPLICABLE
+    // Toggles
     if(state.model === 'islm') {
-        const tog = document.createElement('div'); tog.className = 'toggle-row';
-        tog.innerHTML = `<span class="toggle-label">Open Economy</span>
-            <label class="switch"><input type="checkbox" id="tog-open" ${state.isOpen?'checked':''}><span class="slider"></span></label>`;
-        cDiv.appendChild(tog);
-        tog.querySelector('input').addEventListener('change', e => {
-            state.isOpen = e.target.checked; update();
-        });
+        cDiv.innerHTML += `
+        <div class="toggle-row"><span class="toggle-label">Open Econ (Imp Leakage)</span>
+        <label class="switch"><input type="checkbox" ${state.isOpen?'checked':''} onchange="state.isOpen=this.checked; update()"><span class="slider"></span></label></div>`;
     }
     if(state.model === 'mundell') {
-        const tog = document.createElement('div'); tog.className = 'toggle-row';
-        tog.innerHTML = `<span class="toggle-label">Fixed Ex. Rate</span>
-            <label class="switch"><input type="checkbox" id="tog-regime" ${state.regime==='fixed'?'checked':''}><span class="slider"></span></label>`;
-        cDiv.appendChild(tog);
-        tog.querySelector('input').addEventListener('change', e => {
-            state.regime = e.target.checked ? 'fixed' : 'float'; update();
-        });
+        cDiv.innerHTML += `
+        <div class="toggle-row"><span class="toggle-label">Fixed Ex. Rate</span>
+        <label class="switch"><input type="checkbox" ${state.regime==='fixed'?'checked':''} onchange="state.regime=this.checked?'fixed':'float'; update()"><span class="slider"></span></label></div>`;
+    }
+    if(state.model === 'phillips') {
+        cDiv.innerHTML += `
+        <div class="toggle-row"><span class="toggle-label">Adaptive Expectations</span>
+        <label class="switch"><input type="checkbox" ${state.adaptive?'checked':''} onchange="state.adaptive=this.checked; update()"><span class="slider"></span></label></div>`;
     }
 
-    // 2. ADD SLIDERS
-    const defs = {
-        islm: ['G','T','M'], adas: ['G','M','Pe'], 
-        solow: ['s','d','n'], mundell: ['G','M','rs'],
-        phillips: ['Pie', 'Un', 'u', 'shock']
-    };
+    // Sliders
+    const keys = Object.keys(state).filter(k => k!=='model' && k!=='isOpen' && k!=='regime' && k!=='adaptive' && k!=='k' && k!=='P');
     const ranges = {
-        G:[20,150,1], T:[20,150,1], M:[20,150,1], Pe:[0.5,2.0,0.1],
-        s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.01], rs:[1,8,0.1],
-        Pie:[0, 10, 0.1], Un:[2, 8, 0.1], u:[0, 12, 0.1], shock:[-3, 5, 0.5]
+        G:[10,200,1], T:[10,200,1], M:[10,200,1], Pe:[0.5,5.0,0.1],
+        s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.005], g:[0,0.1,0.005], rs:[0,10,0.1],
+        Pie:[0,10,0.1], Un:[2,10,0.1], demandGap:[-5,5,0.1], shock:[-5,5,0.1]
     };
-    defs[state.model].forEach(key => {
+    
+    keys.forEach(key => {
         const r = ranges[key];
+        if(!r) return;
         const d = document.createElement('div'); d.className = 'slider-group';
         d.innerHTML = `
             <div class="slider-header"><div class="label-wrap">${key}</div><span class="slider-val" id="val-${key}">${state[key]}</span></div>
-            <input type="range" id="in-${key}" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${state[key]}">`;
+            <input type="range" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${state[key]}" oninput="state['${key}']=parseFloat(this.value); document.getElementById('val-${key}').innerText=this.value; update();">`;
         cDiv.appendChild(d);
-        d.querySelector('input').addEventListener('input', e => {
-            state[key] = parseFloat(e.target.value);
-            document.getElementById(`val-${key}`).innerText = state[key];
-            update();
-        });
     });
 }
 
-function setHorizon(h) {
-    state.horizon = h;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
-    update();
+function resetModel() {
+    switchModel(state.model);
 }
 
 window.addEventListener('resize', update);
 switchModel('islm');
+
 </script>
 </body>
 </html>

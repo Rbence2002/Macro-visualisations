@@ -25,7 +25,7 @@
             --axis-line: #94a3b8;
         }
 
-        /* Projector Mode (Light Theme) - Added for Classroom Visibility */
+        /* Projector Mode (Light Theme) */
         :root.light-mode {
             --bg-body: #ffffff;
             --bg-panel: #f8fafc;
@@ -196,7 +196,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v16.2</span>
+        MACRO SIMULATOR <span class="tag">v16.3</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -280,9 +280,11 @@ function getVar(name) {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 15, k: 0.5, h: 2.0, Yn: 100 };
+/* FIXED PARAMETERS: Reduced 'b' to 10 for better stability (per review) */
+const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100 };
+
 const DEFAULTS = {
-    // Tweaked default ISLM for centered initial view (G=75, M=45)
+    // Tweaked defaults for centered view
     islm: { G: 75, T: 60, M: 45 },
     adas: { G: 60, M: 60, Pe: 1.0 },
     solow: { s: 0.3, d: 0.1, n: 0.02 },
@@ -312,7 +314,7 @@ const MODELS = {
         ],
         solve: (st) => {
             let { G, T, M } = st;
-            // Bounds to prevent math breaking
+            // Bounds
             G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
             const { c1, c0, I0, b, k, h, Yn } = PARAMS;
             const mult = 1 / (1 - c1);
@@ -322,19 +324,18 @@ const MODELS = {
             if (st.horizon === 'long') {
                 Y = Yn;
                 r = (A - Y/mult) / b;
-                // P adjusts to clear money market
                 const L = k*Y - h*r;
                 P = L > 0.1 ? M / L : M / 0.1;
             } else {
-                // Short Run: P is fixed at 1.0
-                // LM is r = (kY - M)/h
+                // Short Run: P=1.0 implicit
                 const denom = 1 + (mult * b * k) / h;
                 const num = mult * (A + (b * M)/h);
                 Y = num / denom;
                 r = (k*Y - M)/h;
             }
             
-            if(r < 0.1) warningMsg = "Liquidity Trap Region (r ≈ 0)";
+            // FIX: Zero Lower Bound check per review
+            if(r < 0.1) warningMsg = "Liquidity Trap (r ≈ 0%)";
             else if(r > 20) warningMsg = "High Interest Rate";
             else warningMsg = null;
             return { Y, r, P, A, M, mult, type:'islm' };
@@ -374,7 +375,10 @@ const MODELS = {
 
             const denom = h + b*k*mult;
             const term1 = (h * mult * A) / denom; 
-            const term2 = (b * M) / denom;
+            
+            // CRITICAL FIX: Added 'mult' to term2 calculation
+            const term2 = (b * mult * M) / denom;
+            
             let Y, P;
             if (st.horizon === 'short') {
                 P = Pe;
@@ -460,7 +464,8 @@ const MODELS = {
             const Y = (M + h*rs) / k; 
             const I = I0 - b*rs;
             const C = c0 + c1*(Y - T);
-            const NX_aut = 50; const q = 10;
+            // FIX: Reduced NX_aut to 10 (was 50) and q to 2 (was 10) for better scaling
+            const NX_aut = 10; const q = 2;
             const e = (C + I + G + NX_aut - Y) / q;
             return { Y, e, I_comp: (I+G+NX_aut+c0-c1*T), q, type:'mundell' };
         },
@@ -475,28 +480,24 @@ const MODELS = {
 };
 
 /* ==========================================================================
-   VIEW ENGINE (CALIBRATED FIX)
+   VIEW ENGINE (LOCKED CLASSROOM MODE)
    ========================================================================== */
 function calculateViewWindow(sol, prevSol) {
-    // We use distinct, fixed boundaries for each model.
-    // These numbers are calculated to fit the "Extreme" slider values
-    // so the axes never need to resize (preventing the "angle shift" visual bug).
-
     if(state.model === 'islm') {
-        view.maxX = 350;  // Fits Max Output (approx 325 when G=150, M=150)
-        view.maxY = 25;   // Fits Max Interest Rate (can spike to ~22%)
+        view.maxX = 350;
+        view.maxY = 25; 
     } 
     else if (state.model === 'adas') {
         view.maxX = 350;
-        view.maxY = 5.0;  // Price Level usually stays under 3.0
+        view.maxY = 5.0; 
     }
     else if (state.model === 'solow') {
-        view.maxX = 60;   // Solow Steady State k* usually < 50
-        view.maxY = 6;    // Output y* usually < 5
+        view.maxX = 60;
+        view.maxY = 6;
     }
     else if (state.model === 'mundell') {
         view.maxX = 350;
-        view.maxY = 15;   // Exchange rate (e)
+        view.maxY = 15;
     }
 }
 
@@ -598,7 +599,6 @@ function drawCurve(func, style, label) {
     if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10 && lastY < canvas.height-pad-10) {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
         const m = ctx.measureText(label);
-        // Use background color for label backing to ensure readability over grid
         ctx.fillStyle = getVar('--bg-body');
         ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
         ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; 
@@ -623,11 +623,8 @@ function drawDot(x, y) {
     const [sx, sy] = toScreen(x, y);
     if(sx < pad || sx > canvas.width-pad || sy < pad || sy > canvas.height-pad) return;
 
-    // Outer ring
     ctx.fillStyle = getVar('--bg-body'); ctx.beginPath();
     ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fill();
-    
-    // Inner Dot
     ctx.fillStyle = getVar('--text-main'); ctx.beginPath();
     ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
 
@@ -660,9 +657,18 @@ function update() {
     canvas.height = canvas.parentElement.clientHeight;
 
     const m = MODELS[state.model];
-    const sol = m.solve(state);
+    // Create copy for ghost to ensure bounds safety
     let prevSol = null;
-    if(prevState) prevSol = m.solve(prevState);
+    if(prevState) {
+        // Deep copy and apply bounds before solving to prevent ghost crashes
+        const safePrev = JSON.parse(JSON.stringify(prevState));
+        safePrev.G=Math.max(20,Math.min(150,safePrev.G));
+        safePrev.T=Math.max(20,Math.min(150,safePrev.T));
+        safePrev.M=Math.max(20,Math.min(150,safePrev.M));
+        prevSol = m.solve(safePrev);
+    }
+    const sol = m.solve(state);
+
     const wBanner = document.getElementById('warning');
     if(warningMsg) { wBanner.innerText = warningMsg; wBanner.style.display = 'block'; }
     else { wBanner.style.display = 'none'; }

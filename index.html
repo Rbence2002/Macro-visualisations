@@ -3,73 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MacroSim | Classroom Edition</title>
+    <title>MacroSim | Advanced Edition</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
-            /* Default Dark Mode (Student/Laptop View) */
-            --bg-body: #0f172a;
-            --bg-panel: #1e293b; 
-            --bg-sidebar: #020617;
-            --border: #334155; 
-            --text-main: #f1f5f9; 
-            --text-muted: #94a3b8;
-            --c-blue: #3b82f6; 
-            --c-red: #ef4444; 
-            --c-green: #10b981; 
-            --c-yellow: #f59e0b;
-            --accent: #6366f1;
-            --warn: #f59e0b;
-            --grid-line: #334155;
-            --axis-line: #94a3b8;
+            /* Dark Mode (Default) */
+            --bg-body: #0f172a; --bg-panel: #1e293b; --bg-sidebar: #020617;
+            --border: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --accent: #6366f1; --warn: #f59e0b;
+            --grid-line: #334155; --axis-line: #94a3b8;
         }
-
-        /* Projector Mode (Light Theme) */
         :root.light-mode {
-            --bg-body: #ffffff;
-            --bg-panel: #f8fafc;
-            --bg-sidebar: #f1f5f9;
-            --border: #cbd5e1;
-            --text-main: #0f172a;      
-            --text-muted: #475569;
-            --grid-line: #e2e8f0;
-            --axis-line: #64748b;
+            /* Light Mode */
+            --bg-body: #ffffff; --bg-panel: #f8fafc; --bg-sidebar: #f1f5f9;
+            --border: #cbd5e1; --text-main: #0f172a; --text-muted: #475569;
+            --grid-line: #e2e8f0; --axis-line: #64748b;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-body); color: var(--text-main); margin: 0; height: 100vh;
             display: flex; flex-direction: column; overflow: hidden;
             transition: background-color 0.3s, color 0.3s;
         }
         header {
-            height: 50px;
-            padding: 0 20px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+            height: 50px; padding: 0 20px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
-            transition: background-color 0.3s, border-color 0.3s;
         }
         .brand { font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
         .tag { background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
-        
         .layout { display: flex; flex: 1; height: calc(100vh - 50px); }
         .sidebar {
-            width: 360px;
-            background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+            width: 360px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
             display: flex; flex-direction: column; overflow-y: auto;
-            transition: background-color 0.3s, border-color 0.3s;
         }
         .section-title {
-            padding: 16px 20px 8px;
-            font-size: 0.7rem; text-transform: uppercase;
+            padding: 16px 20px 8px; font-size: 0.7rem; text-transform: uppercase;
             color: var(--text-muted); font-weight: 700; letter-spacing: 1px; border-top: 1px solid var(--border);
         }
         .section-title:first-child { border-top: none; }
-        
         .model-list { list-style: none; padding: 0; margin: 0; }
         .model-btn {
-            width: 100%;
-            text-align: left; padding: 12px 20px; background: transparent; border: none;
+            width: 100%; text-align: left; padding: 12px 20px; background: transparent; border: none;
             color: var(--text-muted); cursor: pointer; border-left: 3px solid transparent; font-size: 0.9rem;
             transition: all 0.2s;
         }
@@ -81,108 +56,76 @@
         .slider-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 8px; }
         .label-wrap { display: flex; align-items: center; gap: 8px; }
         .info-btn {
-            display: inline-flex;
-            align-items: center; justify-content: center; width: 14px; height: 14px;
+            display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
             border-radius: 50%; background: var(--border); color: var(--text-muted); font-size: 10px; font-weight: bold;
             font-family: serif; font-style: italic; cursor: help; position: relative;
         }
         .info-btn:hover { background: var(--accent); color: white; }
         .tooltip-box {
-            position: absolute;
-            bottom: 120%; left: -10px; background: var(--bg-sidebar); border: 1px solid var(--border);
+            position: absolute; bottom: 120%; left: -10px; background: var(--bg-sidebar); border: 1px solid var(--border);
             color: var(--text-main); padding: 10px; border-radius: 6px; font-size: 0.75rem; width: 240px;
-            z-index: 1000;
-            display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); pointer-events: none; line-height: 1.4;
+            z-index: 1000; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); pointer-events: none; line-height: 1.4;
         }
         .info-btn:hover .tooltip-box { display: block; }
         .slider-val { font-family: monospace; color: var(--accent); }
         input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
         
+        /* Toggles */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding: 0 5px; }
+        .toggle-label { font-size: 0.8rem; color: var(--text-main); }
+        .switch { position: relative; display: inline-block; width: 34px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(14px); }
+
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px 20px; }
         .scenario-btn {
-            background: var(--bg-panel);
-            border: 1px solid var(--border); color: var(--text-muted); padding: 8px;
+            background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-muted); padding: 8px;
             border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; text-align: center;
         }
         .scenario-btn:hover { border-color: var(--accent); color: var(--text-main); background: var(--border); }
-        
         .reset-btn {
-            width: calc(100% - 40px);
-            margin: 0 20px 20px 20px; padding: 10px; background: transparent;
+            width: calc(100% - 40px); margin: 0 20px 20px 20px; padding: 10px; background: transparent;
             border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer; border-radius: 6px;
             font-size: 0.8rem; transition: all 0.2s;
         }
         .reset-btn:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99, 102, 241, 0.1); }
-
         .viz-panel {
-            flex: 2;
-            position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
+            flex: 2; position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
             transition: background-color 0.3s;
         }
-        
         .horizon-tabs {
-            position: absolute;
-            top: 15px; left: 15px; z-index: 10;
+            position: absolute; top: 15px; left: 15px; z-index: 10;
             display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border);
         }
-        .tab-btn {
-            background: transparent;
-            border: none; color: var(--text-muted); padding: 6px 12px;
-            font-size: 0.8rem; cursor: pointer; border-radius: 6px;
-        }
+        .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 6px 12px; font-size: 0.8rem; cursor: pointer; border-radius: 6px; }
         .tab-btn.active { background: var(--accent); color: white; }
-        
         canvas { width: 100%; height: 100%; }
-        
         .edu-panel {
-            width: 320px;
-            background-color: var(--bg-body); border-left: 1px solid var(--border);
+            width: 320px; background-color: var(--bg-body); border-left: 1px solid var(--border);
             display: flex; flex-direction: column; overflow-y: auto; padding: 20px;
             transition: background-color 0.3s, border-color 0.3s;
         }
-        .edu-card {
-            background: var(--bg-panel);
-            border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;
-        }
-        .edu-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-main);
-        border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .edu-card { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .edu-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-main); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
         .math-block { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; overflow-x: auto; }
         .analysis-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
-        
-        .stats-overlay {
-            position: absolute;
-            top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10;
-        }
-        .stat-box {
-            background: var(--bg-panel);
-            border: 1px solid var(--border); padding: 6px 12px;
-            border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            opacity: 0.95;
-        }
+        .stats-overlay { position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10; }
+        .stat-box { background: var(--bg-panel); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0.95; }
         .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
         .stat-num { font-size: 0.95rem; font-weight: 700; color: var(--text-main); font-family: monospace; }
-        
         .warning-banner {
-            position: absolute;
-            bottom: 15px; left: 50%; transform: translateX(-50%);
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warn); color: var(--warn);
-            padding: 8px 16px;
-            border-radius: 99px; font-size: 0.75rem; font-weight: 600;
+            padding: 8px 16px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;
             pointer-events: none; display: none; backdrop-filter: blur(4px);
         }
-
         #legend-content { display: flex; flex-direction: column; gap: 8px; }
         .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--text-muted); }
         .legend-line { width: 16px; height: 3px; border-radius: 2px; }
-        
-        .creator-mark {
-            margin-top: auto;
-            padding-top: 20px; text-align: right;
-            font-size: 10px; color: var(--text-muted); opacity: 0.5; font-family: serif; font-style: italic;
-            letter-spacing: 0.5px;
-        }
-
-        /* Toggle Button Style */
+        .creator-mark { margin-top: auto; padding-top: 20px; text-align: right; font-size: 10px; color: var(--text-muted); opacity: 0.5; font-family: serif; font-style: italic; letter-spacing: 0.5px; }
         .theme-toggle {
             background: transparent; border: 1px solid var(--border); color: var(--text-main);
             padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-right: 15px;
@@ -196,7 +139,7 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v16.3</span>
+        MACRO SIMULATOR <span class="tag">v17.0</span>
     </div>
     <div style="display:flex; align-items:center;">
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
@@ -227,7 +170,6 @@
         </div>
         <div class="stats-overlay" id="stats"></div>
         <div class="warning-banner" id="warning">⚠️ Extreme Parameters Detected</div>
-        
         <canvas id="canvas"></canvas>
     </main>
 
@@ -236,29 +178,25 @@
             <div class="edu-title">Mathematical Derivation</div>
             <div class="math-block" id="math-display"></div>
         </div>
-        
         <div class="edu-card">
             <div class="edu-title">Analysis</div>
             <div class="analysis-text" id="analysis-text"></div>
         </div>
-
         <div class="edu-card">
             <div class="edu-title">Legend</div>
             <div id="legend-content"></div>
         </div>
-
         <div class="creator-mark">Created by Bence Rudolph</div>
     </aside>
 </div>
 
 <script>
 /* ==========================================================================
-   THEME ENGINE (Light/Dark)
+   THEME ENGINE
    ========================================================================== */
 function toggleTheme() {
     const root = document.documentElement;
     const btn = document.getElementById('theme-btn');
-    
     if (root.classList.contains('light-mode')) {
         root.classList.remove('light-mode');
         btn.innerText = "☀️ Projector Mode";
@@ -266,13 +204,9 @@ function toggleTheme() {
         root.classList.add('light-mode');
         btn.innerText = "🌙 Dark Mode";
     }
-    update(); // Redraw canvas with new colors
+    update();
 }
-
-/* Helper to fetch CSS variables for Canvas */
-function getVar(name) {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
+function getVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 
 /* ==========================================================================
    CORE ENGINE
@@ -280,17 +214,17 @@ function getVar(name) {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-/* FIXED PARAMETERS: Reduced 'b' to 10 for better stability (per review) */
-const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100 };
+/* PARAMETERS (b=10 for stability) */
+const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 10, k: 0.5, h: 2.0, Yn: 100, m: 0.15 };
 
 const DEFAULTS = {
-    // Tweaked defaults for centered view
-    islm: { G: 75, T: 60, M: 45 },
+    islm: { G: 75, T: 60, M: 45, isOpen: false },
     adas: { G: 60, M: 60, Pe: 1.0 },
     solow: { s: 0.3, d: 0.1, n: 0.02 },
-    mundell: { G: 60, M: 60, rs: 3.0 }
+    mundell: { G: 60, M: 60, rs: 3.0, regime: 'float' } // regime: 'float' or 'fixed'
 };
-let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0 };
+
+let state = { model: 'islm', horizon: 'short', G: 75, T: 60, M: 45, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0, isOpen: false, regime: 'float' };
 let prevState = null;
 let view = { maxX: 350, maxY: 25 }; 
 let warningMsg = null;
@@ -313,32 +247,33 @@ const MODELS = {
             { name: "Monetary Tight.", apply: {G:75, T:60, M:25} }
         ],
         solve: (st) => {
-            let { G, T, M } = st;
-            // Bounds
+            let { G, T, M, isOpen } = st;
             G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
-            const { c1, c0, I0, b, k, h, Yn } = PARAMS;
-            const mult = 1 / (1 - c1);
+            const { c1, c0, I0, b, k, h, Yn, m } = PARAMS;
+            
+            // OPEN ECONOMY TOGGLE LOGIC
+            // If Open, Multiplier = 1 / (1 - c1 + m)
+            // If Closed, Multiplier = 1 / (1 - c1)
+            const effMult = isOpen ? 1/(1 - c1 + m) : 1/(1 - c1);
             const A = c0 + I0 + G - c1*T; 
 
             let Y, r, P = 1.0;
             if (st.horizon === 'long') {
                 Y = Yn;
-                r = (A - Y/mult) / b;
+                r = (A - Y/effMult) / b;
                 const L = k*Y - h*r;
                 P = L > 0.1 ? M / L : M / 0.1;
             } else {
-                // Short Run: P=1.0 implicit
-                const denom = 1 + (mult * b * k) / h;
-                const num = mult * (A + (b * M)/h);
+                const denom = 1 + (effMult * b * k) / h;
+                const num = effMult * (A + (b * M)/h);
                 Y = num / denom;
                 r = (k*Y - M)/h;
             }
             
-            // FIX: Zero Lower Bound check per review
             if(r < 0.1) warningMsg = "Liquidity Trap (r ≈ 0%)";
             else if(r > 20) warningMsg = "High Interest Rate";
             else warningMsg = null;
-            return { Y, r, P, A, M, mult, type:'islm' };
+            return { Y, r, P, A, M, mult: effMult, type:'islm' };
         },
         draw: (sol, isGhost) => {
             const style = isGhost ? 'ghost' : 'is';
@@ -351,7 +286,10 @@ const MODELS = {
             if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, getVar('--axis-line'), 'Yn');
             if(!isGhost) drawDot(sol.Y, sol.r);
         },
-        explain: (sol) => `$$ IS: Y = ${sol.mult.toFixed(2)}(${sol.A.toFixed(0)} - ${PARAMS.b}r) $$ $$ LM: r = 0.25Y - ${sol.M.toFixed(0)}/P $$`
+        explain: (sol) => {
+            const mText = state.isOpen ? " (Open: leaks to imports)" : " (Closed)";
+            return `$$ \\text{Mult} = ${sol.mult.toFixed(2)} ${mText} $$ $$ IS: Y = ${sol.mult.toFixed(2)}(A - ${PARAMS.b}r) $$`;
+        }
     },
 
     adas: {
@@ -363,37 +301,28 @@ const MODELS = {
         ],
         scenarios: [
             { name: "Demand Boom", apply: {G:110, M:70, Pe:1.0} },
-            { name: "Deep Recession", apply: {G:30, M:30, Pe:1.0} },
-            { name: "Supply Shock", apply: {G:60, M:60, Pe:1.6} },
-            { name: "Deflation", apply: {G:30, M:30, Pe:0.7} }
+            { name: "Supply Shock", apply: {G:60, M:60, Pe:1.6} }
         ],
         solve: (st) => {
             const { c1, c0, I0, b, k, h, Yn } = PARAMS;
             const { G, T, M, Pe } = st;
             const mult = 1 / (1 - c1);
             const A = c0 + I0 + G - c1*T;
-
             const denom = h + b*k*mult;
             const term1 = (h * mult * A) / denom; 
-            
-            // CRITICAL FIX: Added 'mult' to term2 calculation
             const term2 = (b * mult * M) / denom;
             
             let Y, P;
             if (st.horizon === 'short') {
-                P = Pe;
-                Y = term1 + term2/P;
+                P = Pe; Y = term1 + term2/P;
             } else if (st.horizon === 'long') {
-                Y = Yn;
-                P = term2 / Math.max(0.1, Y - term1);
+                Y = Yn; P = term2 / Math.max(0.1, Y - term1);
             } else {
-                const lambda = 0.5;
-                const a = lambda;
+                const lambda = 0.5; const a = lambda;
                 const b_q = Pe - lambda*Yn - term1*lambda;
                 const c_q = -term1*(Pe - lambda*Yn) - term2;
                 const det = Math.sqrt(Math.max(0, b_q*b_q - 4*a*c_q));
-                Y = (-b_q + det)/(2*a);
-                P = Pe + lambda*(Y - Yn);
+                Y = (-b_q + det)/(2*a); P = Pe + lambda*(Y - Yn);
             }
             return { Y, P, term1, term2, Pe, type:'adas' };
         },
@@ -401,12 +330,9 @@ const MODELS = {
             const sAD = isGhost ? 'ghost' : 'ad';
             const sAS = isGhost ? 'ghost' : 'as';
             drawCurve(y => {
-                let den = y - sol.term1;
-                if(den < sol.term1 * 0.01) return null;
-                const val = sol.term2 / den;
-                return (val > 0 && val < view.maxY*1.5) ? val : null;
+                let den = y - sol.term1; if(den < sol.term1 * 0.01) return null;
+                const val = sol.term2 / den; return (val > 0 && val < view.maxY*1.5) ? val : null;
             }, sAD, isGhost?'AD₀':'AD₁'); 
-            
             if(state.horizon === 'short') drawCurve(y => sol.Pe, sAS, isGhost?'SRAS₀':'SRAS₁');
             else if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#fbbf24', 'LRAS');
             else if(state.horizon === 'medium') drawCurve(y => sol.Pe + 0.5*(y-PARAMS.Yn), sAS, isGhost?'AS₀':'AS₁');
@@ -418,21 +344,15 @@ const MODELS = {
     solow: {
         name: "Solow",
         legend: [
-            {label: 'Production f(k)', color: '#3b82f6'},
-            {label: 'Investment sf(k)', color: '#10b981'},
-            {label: 'Depreciation (δ+n)k', color: '#ef4444'}
+            {label: 'f(k)', color: '#3b82f6'}, {label: 'sf(k)', color: '#10b981'}, {label: '(δ+n)k', color: '#ef4444'}
         ],
         scenarios: [
-            { name: "Inv. Boost (s↑)", apply: {s:0.5, d:0.1, n:0.02} },
-            { name: "Cap. Destruction", apply: {s:0.3, d:0.2, n:0.02} },
-            { name: "Pop. Boom (n↑)", apply: {s:0.3, d:0.1, n:0.08} }
+            { name: "Inv. Boost", apply: {s:0.5, d:0.1, n:0.02} },
+            { name: "Pop. Boom", apply: {s:0.3, d:0.1, n:0.08} }
         ],
         solve: (st) => {
-            const { s, d, n } = st;
-            const alpha = 0.33;
-            const effDep = d + n;
-            const k_star = Math.pow(s/effDep, 1/(1-alpha));
-            const y_star = Math.pow(k_star, alpha);
+            const { s, d, n } = st; const alpha = 0.33; const effDep = d + n;
+            const k_star = Math.pow(s/effDep, 1/(1-alpha)); const y_star = Math.pow(k_star, alpha);
             return { k: k_star, y: y_star, effDep, s, type:'solow' };
         },
         draw: (sol, isGhost) => {
@@ -460,104 +380,131 @@ const MODELS = {
         ],
         solve: (st) => {
             const { k, h, c1, I0, b, c0 } = PARAMS;
-            const { M, G, T, rs } = st;
-            const Y = (M + h*rs) / k; 
-            const I = I0 - b*rs;
-            const C = c0 + c1*(Y - T);
-            // FIX: Reduced NX_aut to 10 (was 50) and q to 2 (was 10) for better scaling
+            const { M, G, T, rs, regime } = st;
+            
+            // Fixed Parameters
             const NX_aut = 10; const q = 2;
-            const e = (C + I + G + NX_aut - Y) / q;
-            return { Y, e, I_comp: (I+G+NX_aut+c0-c1*T), q, type:'mundell' };
+
+            let Y, e, M_eff = M;
+
+            if (regime === 'float') {
+                // FLOATING: M is fixed, e adjusts
+                // 1. LM* Curve (Vertical): Y = (M/P + h*r*) / k
+                //    (Assume P=1)
+                Y = (M + h*rs) / k;
+                
+                // 2. IS* Curve: Y = Multiplier components + NX(e)
+                //    Solve for e: e = (Components - Y) / q
+                const I = I0 - b*rs;
+                const C = c0 + c1*(Y - T);
+                // IS: Y = C + I + G + NX_aut - q*e
+                // q*e = C + I + G + NX_aut - Y
+                e = (C + I + G + NX_aut - Y) / q;
+
+            } else {
+                // FIXED: e is fixed, M adjusts
+                // Let's fix e at a target value (e.g., 2.0)
+                e = 2.0;
+
+                // 1. IS* Curve determines Y directly because e is fixed
+                //    Y = C(Y-T) + I(r*) + G + NX(fixed_e)
+                //    Y = c0 + c1(Y-T) + I0 - b*rs + G + NX_aut - q*e
+                //    Y(1-c1) = c0 - c1T + I0 - b*rs + G + NX_aut - q*e
+                //    Y = (Components...) / (1-c1)
+                const num = c0 - c1*T + I0 - b*rs + G + NX_aut - q*e;
+                Y = num / (1 - c1);
+
+                // 2. LM* Curve adjusts: M must support this Y at r*
+                //    M/P = kY - h*rs => M = kY - h*rs
+                M_eff = k*Y - h*rs;
+            }
+
+            return { Y, e, M: M_eff, I_comp: (I0 - b*rs + G + NX_aut + c0 - c1*T), q, regime, type:'mundell' };
         },
         draw: (sol, isGhost) => {
             const sIS = isGhost ? 'ghost' : 'is';
-            drawVertical(sol.Y, isGhost? getVar('--border') :'#ef4444', isGhost?'LM*₀':'LM*₁'); 
+            const sLM = isGhost ? 'ghost' : 'lm';
+            
+            // Draw Vertical LM*
+            // In Fixed regime, the LM curve shifts to the new Y. In Float, it stays at M/k..
+            drawVertical(sol.Y, isGhost? getVar('--border') : '#ef4444', isGhost?'LM*₀':'LM*₁'); 
+            
+            // Draw Downward Sloping IS*
+            // e = (I_comp + c1*Y - Y)/q
             drawCurve(y => (sol.I_comp + PARAMS.c1*y - y)/sol.q, sIS, isGhost?'IS*₀':'IS*₁'); 
-            if(!isGhost) drawDot(sol.Y, sol.e);
+            
+            if(!isGhost) {
+                drawDot(sol.Y, sol.e);
+                if(sol.regime === 'fixed') {
+                    // Draw horizontal line for Fixed Rate
+                    const [sx, sy] = toScreen(0, sol.e);
+                    ctx.save(); ctx.strokeStyle='#f59e0b'; ctx.setLineDash([2,4]);
+                    ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy); ctx.stroke();
+                    ctx.fillStyle='#f59e0b'; ctx.fillText("Pegged Rate", 10, sy-5);
+                    ctx.restore();
+                }
+            }
         },
-        explain: (sol) => `$$ Y = LM^*(M, r^*) \\quad e = IS^*(Y, G, r^*) $$`
+        explain: (sol) => {
+            if(sol.regime === 'float') 
+                return `$$ \\text{Float: } M \\text{ fixed.} \\quad e \\text{ adjusts.} $$`;
+            else 
+                return `$$ \\text{Fixed: } e=2.0. \\quad M \\text{ adjusts to } ${sol.M.toFixed(0)} $$`;
+        }
     }
 };
 
 /* ==========================================================================
-   VIEW ENGINE (LOCKED CLASSROOM MODE)
+   VIEW ENGINE
    ========================================================================== */
 function calculateViewWindow(sol, prevSol) {
-    if(state.model === 'islm') {
-        view.maxX = 350;
-        view.maxY = 25; 
-    } 
-    else if (state.model === 'adas') {
-        view.maxX = 350;
-        view.maxY = 5.0; 
-    }
-    else if (state.model === 'solow') {
-        view.maxX = 60;
-        view.maxY = 6;
-    }
-    else if (state.model === 'mundell') {
-        view.maxX = 350;
-        view.maxY = 15;
-    }
+    if(state.model === 'islm') { view.maxX = 350; view.maxY = 25; } 
+    else if (state.model === 'adas') { view.maxX = 350; view.maxY = 5.0; }
+    else if (state.model === 'solow') { view.maxX = 60; view.maxY = 6; }
+    else if (state.model === 'mundell') { view.maxX = 350; view.maxY = 15; }
 }
 
 function toScreen(x, y) {
-    const pad = 60;
-    const w = canvas.width; const h = canvas.height;
+    const pad = 60; const w = canvas.width; const h = canvas.height;
     const sX = pad + (x / view.maxX) * (w - 2*pad);
     const sY = (h - pad) - (y / view.maxY) * (h - 2*pad);
     return [sX, sY];
 }
 
 function drawGrid() {
-    const pad = 60;
-    const w = canvas.width; const h = canvas.height;
-    const gridColor = getVar('--grid-line');
-    const axisColor = getVar('--axis-line');
-    const textColor = getVar('--text-main');
-    
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
-
-    ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5; ctx.beginPath();
+    const pad = 60; const w = canvas.width; const h = canvas.height;
+    ctx.save(); ctx.beginPath(); ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
+    ctx.strokeStyle = getVar('--grid-line'); ctx.lineWidth = 0.5; ctx.beginPath();
     for(let i=0; i<=10; i++) {
-        const val = (i/10) * view.maxX;
-        const [sx, sy] = toScreen(val, 0);
+        const val = (i/10) * view.maxX; const [sx, sy] = toScreen(val, 0);
         ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
     }
     for(let i=0; i<=10; i++) {
-        const val = (i/10) * view.maxY;
-        const [sx, sy] = toScreen(0, val);
+        const val = (i/10) * view.maxY; const [sx, sy] = toScreen(0, val);
         ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy);
     }
-    ctx.stroke();
-    ctx.restore();
+    ctx.stroke(); ctx.restore();
 
     const [ox, oy] = toScreen(0,0);
-    ctx.strokeStyle = axisColor; ctx.lineWidth = 2; ctx.beginPath();
-    ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad);
-    ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy);
-    ctx.stroke();
+    ctx.strokeStyle = getVar('--axis-line'); ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad); ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy); ctx.stroke();
 
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = textColor;
-    let xLab = "Output (Y)";
-    let yLab = state.model === 'islm' ? "Interest Rate (r)" : (state.model === 'adas' ? "Price Level (P)" : "Value");
-    if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Value"; }
-    if(state.model === 'mundell') yLab = "Exchange Rate (e)";
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = getVar('--text-main');
+    let xLab = "Output (Y)", yLab = "Value";
+    if(state.model === 'islm') yLab = "Interest Rate (r)";
+    else if(state.model === 'adas') yLab = "Price Level (P)";
+    else if(state.model === 'mundell') yLab = "Exchange Rate (e)";
+    else if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Output (y)"; }
     
-    ctx.fillText(xLab, w - 80, oy + 35);
-    ctx.fillText(yLab, ox - 10, pad - 10);
+    ctx.fillText(xLab, w - 80, oy + 35); ctx.fillText(yLab, ox - 10, pad - 10);
     
     ctx.fillStyle = getVar('--text-muted'); ctx.font = '10px monospace';
     for(let i=1; i<=10; i+=2) {
-        const val = (i/10) * view.maxX;
-        const [sx, sy] = toScreen(val, 0);
+        const val = (i/10) * view.maxX; const [sx, sy] = toScreen(val, 0);
         if(sx < w-pad) ctx.fillText(Math.round(val), sx-10, oy+20);
     }
     for(let i=1; i<=10; i+=2) {
-        const val = (i/10) * view.maxY;
-        const [sx, sy] = toScreen(0, val);
+        const val = (i/10) * view.maxY; const [sx, sy] = toScreen(0, val);
         if(sy > pad) ctx.fillText(val.toFixed(1), ox-35, sy+4);
     }
 }
@@ -565,106 +512,75 @@ function drawGrid() {
 function drawCurve(func, style, label) {
     const colors = { is: '#3b82f6', lm: '#ef4444', ad: '#10b981', as: '#f59e0b', ghost: '#475569' };
     const pad = 60;
-    
-    ctx.save();
-    ctx.beginPath(); ctx.rect(pad, pad, canvas.width-2*pad, canvas.height-2*pad); ctx.clip();
-
+    ctx.save(); ctx.beginPath(); ctx.rect(pad, pad, canvas.width-2*pad, canvas.height-2*pad); ctx.clip();
     ctx.beginPath(); ctx.strokeStyle = colors[style] || '#fff';
     ctx.lineWidth = style === 'ghost' ? 2 : 3;
     if(style === 'ghost') ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
-    let lastX, lastY, lastMathX, lastMathY;
-    let start = true;
     
-    const samples = 400;
-    const mathStep = view.maxX / samples;
+    let lastX, lastY; let start = true;
+    const samples = 400; const mathStep = view.maxX / samples;
+    
     for(let i = 0; i <= samples; i++) {
-        const mathX = i * mathStep;
-        const mathY = func(mathX);
-        
-        if(mathY === null || isNaN(mathY) || !isFinite(mathY)) { start=true; continue; }
+        const mathX = i * mathStep; const mathY = func(mathX);
+        if(mathY === null || !isFinite(mathY)) { start=true; continue; }
         if(mathY < -view.maxY*0.1 || mathY > view.maxY*1.2) { start=true; continue; }
-
         const [sx, sy] = toScreen(mathX, mathY);
-        if(!start && lastMathY !== undefined) {
-             const dy = Math.abs(mathY - lastMathY);
-             const dx = Math.abs(mathX - lastMathX);
-             if(dx > 0 && (dy/dx) > 100) { start = true; continue; } 
-        }
-
         if(start) { ctx.moveTo(sx, sy); start=false; } else ctx.lineTo(sx, sy);
-        lastX = sx; lastY = sy; lastMathX = mathX; lastMathY = mathY;
+        lastX = sx; lastY = sy;
     }
     ctx.stroke();
     
-    if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10 && lastY < canvas.height-pad-10) {
+    if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10) {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
         const m = ctx.measureText(label);
-        ctx.fillStyle = getVar('--bg-body');
-        ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
-        ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; 
-        ctx.fillText(label, lastX+8, lastY);
+        ctx.fillStyle = getVar('--bg-body'); ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
+        ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; ctx.fillText(label, lastX+8, lastY);
     }
     ctx.restore();
 }
 
 function drawVertical(val, color, label) {
-    const pad = 60;
-    const [sx, sy] = toScreen(val, 0);
+    const pad = 60; const [sx, sy] = toScreen(val, 0);
     ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
     ctx.beginPath(); ctx.setLineDash([5,5]); ctx.strokeStyle = color;
-    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
-    ctx.stroke();
+    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height); ctx.stroke();
     if(label) { ctx.fillStyle=color; ctx.fillText(label, sx+5, pad+15); }
     ctx.restore();
 }
 
 function drawDot(x, y) {
-    const pad = 60;
-    const [sx, sy] = toScreen(x, y);
+    const pad = 60; const [sx, sy] = toScreen(x, y);
     if(sx < pad || sx > canvas.width-pad || sy < pad || sy > canvas.height-pad) return;
-
-    ctx.fillStyle = getVar('--bg-body'); ctx.beginPath();
-    ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = getVar('--text-main'); ctx.beginPath();
-    ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
-
-    ctx.save();
-    ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
+    ctx.fillStyle = getVar('--bg-body'); ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = getVar('--text-main'); ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
     const [ox, oy] = toScreen(0,0);
     ctx.strokeStyle = getVar('--text-muted'); ctx.lineWidth=1; ctx.setLineDash([3,3]);
-    ctx.beginPath();
-    ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ox, sy); ctx.stroke();
     ctx.restore();
 }
 
 function updateLegend() {
     const m = MODELS[state.model];
-    const leg = document.getElementById('legend-content');
-    leg.innerHTML = m.legend.map(i => `
-        <div class="legend-item">
-            <div class="legend-line" style="background:${i.color}; border-bottom:${i.dashed?'2px dashed':'none'}"></div>
-            ${i.label}
-        </div>
+    document.getElementById('legend-content').innerHTML = m.legend.map(i => `
+        <div class="legend-item"><div class="legend-line" style="background:${i.color}; border-bottom:${i.dashed?'2px dashed':'none'}"></div>${i.label}</div>
     `).join('');
 }
 
 /* ==========================================================================
-   APP LOGIC
+   CONTROLS & LOGIC
    ========================================================================== */
 function update() {
-    canvas.width = canvas.parentElement.clientWidth;
-    canvas.height = canvas.parentElement.clientHeight;
-
+    canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight;
     const m = MODELS[state.model];
-    // Create copy for ghost to ensure bounds safety
+    
+    // Ghost Logic (Safe Copy)
     let prevSol = null;
     if(prevState) {
-        // Deep copy and apply bounds before solving to prevent ghost crashes
         const safePrev = JSON.parse(JSON.stringify(prevState));
-        safePrev.G=Math.max(20,Math.min(150,safePrev.G));
-        safePrev.T=Math.max(20,Math.min(150,safePrev.T));
-        safePrev.M=Math.max(20,Math.min(150,safePrev.M));
+        // Bounds checking for ghost
+        if(safePrev.G) safePrev.G=Math.max(20,Math.min(150,safePrev.G));
         prevSol = m.solve(safePrev);
     }
     const sol = m.solve(state);
@@ -674,7 +590,6 @@ function update() {
     else { wBanner.style.display = 'none'; }
 
     calculateViewWindow(sol, prevSol);
-    
     ctx.clearRect(0,0,canvas.width, canvas.height);
     drawGrid();
     if(prevSol) m.draw(prevSol, true);
@@ -683,11 +598,13 @@ function update() {
     document.getElementById('math-display').innerHTML = m.explain(sol);
     document.getElementById('analysis-text').innerText = `${m.name} Analysis: Compare initial (dashed) vs current state.`;
     updateLegend();
+
     let stats = [];
     if(sol.type==='islm') stats=[['Y', sol.Y.toFixed(1)], ['r', sol.r.toFixed(2)+'%']];
     else if(sol.type==='adas') stats=[['Y', sol.Y.toFixed(1)], ['P', sol.P.toFixed(2)]];
     else if(sol.type==='solow') stats=[['k*', sol.k.toFixed(1)], ['y*', sol.y.toFixed(2)]];
     else stats=[['Y', sol.Y.toFixed(1)], ['e', sol.e.toFixed(2)]];
+    
     document.getElementById('stats').innerHTML = stats.map(s => `
         <div class="stat-box"><div class="stat-label">${s[0]}</div><div class="stat-num">${s[1]}</div></div>
     `).join('');
@@ -698,47 +615,59 @@ function update() {
 function resetModel() {
     if(DEFAULTS[state.model]) {
         state = { ...state, ...DEFAULTS[state.model] };
-        prevState = null;
-        updateControls();
-        update();
+        prevState = null; updateControls(); update();
     }
 }
 
 const TOOLTIPS = {
-    G: "Gov Spending: Shifts IS / AD right.",
-    T: "Taxes: Shifts IS left. Reduces Disposable Income.",
-    M: "Money Supply: Shifts LM / AD right. Lowers r.",
-    Pe: "Expected Price: Shifts SRAS. Wage setting.",
-    s: "Savings Rate: Rotates Investment curve up.",
-    d: "Depreciation: Rotates break-even line up.",
-    n: "Pop Growth: Dilutes capital per worker.",
-    rs: "World Rate: Sets domestic rate in open economy."
+    G: "Gov Spending", T: "Taxes", M: "Money Supply", Pe: "Expected Price",
+    s: "Savings Rate", d: "Depreciation", n: "Pop Growth", rs: "World Rate"
 };
 
 function switchModel(id) {
     state.model = id; prevState = null;
     document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
-    
     updateControls();
+    
     const sDiv = document.getElementById('scenarios'); sDiv.innerHTML = '';
     MODELS[id].scenarios.forEach(sc => {
         const b = document.createElement('button'); b.className = 'scenario-btn'; b.innerText = sc.name;
         b.onclick = () => {
             prevState = JSON.parse(JSON.stringify(state));
             Object.assign(state, sc.apply);
-            updateControls();
-            update();
+            updateControls(); update();
         };
         sDiv.appendChild(b);
     });
-
     document.getElementById('horizon-ctrl').style.display = (id==='solow'||id==='mundell')?'none':'flex';
     update();
 }
 
 function updateControls() {
     const cDiv = document.getElementById('controls'); cDiv.innerHTML = '';
+    
+    // 1. ADD TOGGLES IF APPLICABLE
+    if(state.model === 'islm') {
+        const tog = document.createElement('div'); tog.className = 'toggle-row';
+        tog.innerHTML = `<span class="toggle-label">Open Economy</span>
+            <label class="switch"><input type="checkbox" id="tog-open" ${state.isOpen?'checked':''}><span class="slider"></span></label>`;
+        cDiv.appendChild(tog);
+        tog.querySelector('input').addEventListener('change', e => {
+            state.isOpen = e.target.checked; update();
+        });
+    }
+    if(state.model === 'mundell') {
+        const tog = document.createElement('div'); tog.className = 'toggle-row';
+        tog.innerHTML = `<span class="toggle-label">Fixed Ex. Rate</span>
+            <label class="switch"><input type="checkbox" id="tog-regime" ${state.regime==='fixed'?'checked':''}><span class="slider"></span></label>`;
+        cDiv.appendChild(tog);
+        tog.querySelector('input').addEventListener('change', e => {
+            state.regime = e.target.checked ? 'fixed' : 'float'; update();
+        });
+    }
+
+    // 2. ADD SLIDERS
     const defs = {
         islm: ['G','T','M'], adas: ['G','M','Pe'], 
         solow: ['s','d','n'], mundell: ['G','M','rs']
@@ -751,10 +680,7 @@ function updateControls() {
         const r = ranges[key];
         const d = document.createElement('div'); d.className = 'slider-group';
         d.innerHTML = `
-            <div class="slider-header">
-                <div class="label-wrap">${key} <div class="info-btn">i<div class="tooltip-box">${TOOLTIPS[key]}</div></div></div>
-                <span class="slider-val" id="val-${key}">${state[key]}</span>
-            </div>
+            <div class="slider-header"><div class="label-wrap">${key}</div><span class="slider-val" id="val-${key}">${state[key]}</span></div>
             <input type="range" id="in-${key}" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${state[key]}">`;
         cDiv.appendChild(d);
         d.querySelector('input').addEventListener('input', e => {
@@ -773,9 +699,7 @@ function setHorizon(h) {
 }
 
 window.addEventListener('resize', update);
-// Initial load
 switchModel('islm');
-
 </script>
 </body>
 </html>

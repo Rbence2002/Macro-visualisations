@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MacroSim | Stable Viewport Edition</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --bg-body: #0f172a; --bg-panel: #1e293b; --bg-sidebar: #020617;
+            --border: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --c-blue: #3b82f6; --c-red: #ef4444; --c-green: #10b981; --c-yellow: #f59e0b;
+            --accent: #6366f1; --warn: #f59e0b;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body); color: var(--text-main); margin: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        header {
+            height: 50px; padding: 0 20px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .brand { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .tag { background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
+        
+        .layout { display: flex; flex: 1; height: calc(100vh - 50px); }
+        .sidebar {
+            width: 360px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow-y: auto;
+        }
+        .section-title {
+            padding: 16px 20px 8px; font-size: 0.7rem; text-transform: uppercase;
+            color: var(--text-muted); font-weight: 700; letter-spacing: 1px; border-top: 1px solid var(--border);
+        }
+        .section-title:first-child { border-top: none; }
+        
+        .model-list { list-style: none; padding: 0; margin: 0; }
+        .model-btn {
+            width: 100%; text-align: left; padding: 12px 20px; background: transparent; border: none;
+            color: var(--text-muted); cursor: pointer; border-left: 3px solid transparent; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .model-btn:hover { background: #1e293b; color: #fff; }
+        .model-btn.active { background: #1e293b; color: #fff; border-left-color: var(--accent); }
+        
+        .controls-container { padding: 10px 20px; }
+        .slider-group { margin-bottom: 16px; }
+        .slider-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 8px; }
+        .label-wrap { display: flex; align-items: center; gap: 8px; }
+        .info-btn {
+            display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
+            border-radius: 50%; background: #334155; color: #cbd5e1; font-size: 10px; font-weight: bold;
+            font-family: serif; font-style: italic; cursor: help; position: relative;
+        }
+        .info-btn:hover { background: var(--accent); color: white; }
+        .tooltip-box {
+            position: absolute; bottom: 120%; left: -10px; background: #020617; border: 1px solid #475569;
+            color: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 0.75rem; width: 240px; z-index: 1000;
+            display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none; line-height: 1.4;
+        }
+        .info-btn:hover .tooltip-box { display: block; }
+        .slider-val { font-family: monospace; color: var(--accent); }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
+        
+        .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px 20px; }
+        .scenario-btn {
+            background: #1e293b; border: 1px solid var(--border); color: var(--text-muted); padding: 8px;
+            border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .scenario-btn:hover { border-color: var(--accent); color: #fff; background: #334155; }
+        
+        .reset-btn {
+            width: calc(100% - 40px); margin: 0 20px 20px 20px; padding: 10px; background: transparent;
+            border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer; border-radius: 6px;
+            font-size: 0.8rem; transition: all 0.2s;
+        }
+        .reset-btn:hover { border-color: var(--accent); color: #fff; background: rgba(99, 102, 241, 0.1); }
+
+        .viz-panel {
+            flex: 2; position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
+        }
+        
+        .horizon-tabs {
+            position: absolute; top: 15px; left: 15px; z-index: 10;
+            display: flex; background: #1e293b; padding: 4px; border-radius: 8px; border: 1px solid var(--border);
+        }
+        .tab-btn {
+            background: transparent; border: none; color: var(--text-muted); padding: 6px 12px;
+            font-size: 0.8rem; cursor: pointer; border-radius: 6px;
+        }
+        .tab-btn.active { background: var(--accent); color: white; }
+        
+        canvas { width: 100%; height: 100%; }
+        
+        .edu-panel {
+            width: 320px; background-color: #0f172a; border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; overflow-y: auto; padding: 20px;
+        }
+        .edu-card {
+            background: #1e293b; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;
+        }
+        .edu-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .math-block { font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; overflow-x: auto; }
+        .analysis-text { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; }
+        
+        .stats-overlay {
+            position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10;
+        }
+        .stat-box {
+            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border); padding: 6px 12px;
+            border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+        .stat-num { font-size: 0.95rem; font-weight: 700; color: #fff; font-family: monospace; }
+        
+        .warning-banner {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warn); color: var(--warn);
+            padding: 8px 16px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;
+            pointer-events: none; display: none; backdrop-filter: blur(4px);
+        }
+
+        #legend-content { display: flex; flex-direction: column; gap: 8px; }
+        .legend-item { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; color: var(--text-muted); }
+        .legend-line { width: 16px; height: 3px; border-radius: 2px; }
+        
+        .creator-mark {
+            margin-top: auto; padding-top: 20px; text-align: right;
+            font-size: 10px; color: gold; opacity: 0.2; font-family: serif; font-style: italic;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <div class="brand-icon">📈</div>
+        MACRO SIMULATOR <span class="tag">v16.0</span>
+    </div>
+</header>
+
+<div class="layout">
+    <nav class="sidebar">
+        <div class="section-title">Select Model</div>
+        <ul class="model-list">
+            <li><button class="model-btn active" onclick="switchModel('islm')">IS-LM Model</button></li>
+            <li><button class="model-btn" onclick="switchModel('adas')">AD-AS Model</button></li>
+            <li><button class="model-btn" onclick="switchModel('solow')">Solow Growth</button></li>
+            <li><button class="model-btn" onclick="switchModel('mundell')">Mundell-Fleming</button></li>
+        </ul>
+        <div class="section-title">Parameters</div>
+        <div class="controls-container" id="controls"></div>
+        <div class="section-title">Quick Scenarios</div>
+        <div class="scenario-grid" id="scenarios"></div>
+        <button class="reset-btn" onclick="resetModel()">⟲ Reset to Baseline</button>
+    </nav>
+
+    <main class="viz-panel">
+        <div class="horizon-tabs" id="horizon-ctrl">
+            <button class="tab-btn active" onclick="setHorizon('short')">Short Run</button>
+            <button class="tab-btn" onclick="setHorizon('medium')">Medium</button>
+            <button class="tab-btn" onclick="setHorizon('long')">Long Run</button>
+        </div>
+        <div class="stats-overlay" id="stats"></div>
+        <div class="warning-banner" id="warning">⚠️ Extreme Parameters Detected</div>
+        
+        <canvas id="canvas"></canvas>
+    </main>
+
+    <aside class="edu-panel">
+        <div class="edu-card">
+            <div class="edu-title">Mathematical Derivation</div>
+            <div class="math-block" id="math-display"></div>
+        </div>
+        
+        <div class="edu-card">
+            <div class="edu-title">Analysis</div>
+            <div class="analysis-text" id="analysis-text"></div>
+        </div>
+
+        <div class="edu-card">
+            <div class="edu-title">Legend</div>
+            <div id="legend-content"></div>
+        </div>
+
+        <div class="creator-mark">Created by Bence Rudolph</div>
+    </aside>
+</div>
+
+<script>
+/* ==========================================================================
+   CORE ENGINE
+   ========================================================================== */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 15, k: 0.5, h: 2.0, Yn: 100 };
+
+const DEFAULTS = {
+    islm: { G: 60, T: 60, M: 60 },
+    adas: { G: 60, M: 60, Pe: 1.0 },
+    solow: { s: 0.3, d: 0.1, n: 0.02 },
+    mundell: { G: 60, M: 60, rs: 3.0 }
+};
+
+let state = { model: 'islm', horizon: 'short', G: 60, T: 60, M: 60, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0 };
+let prevState = null;
+let view = { maxX: 200, maxY: 10 }; 
+let warningMsg = null;
+
+/* ==========================================================================
+   MODELS
+   ========================================================================== */
+const MODELS = {
+    islm: {
+        name: "IS-LM",
+        legend: [
+            {label: 'IS Curve', color: '#3b82f6'},
+            {label: 'LM Curve', color: '#ef4444'},
+            {label: 'Natural Output (Yn)', color: '#94a3b8', dashed: true}
+        ],
+        scenarios: [
+            { name: "Fiscal Stimulus", apply: {G:100, T:60, M:60} },
+            { name: "Fiscal Austerity", apply: {G:30, T:60, M:60} },
+            { name: "Monetary Exp.", apply: {G:60, T:60, M:100} },
+            { name: "Monetary Tight.", apply: {G:60, T:60, M:30} }
+        ],
+        solve: (st) => {
+            let { G, T, M } = st;
+            // Bounds to prevent math breaking
+            G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
+            
+            const { c1, c0, I0, b, k, h, Yn } = PARAMS;
+            const mult = 1 / (1 - c1);
+            const A = c0 + I0 + G - c1*T; 
+
+            let Y, r, P = 1.0;
+
+            if (st.horizon === 'long') {
+                Y = Yn;
+                r = (A - Y/mult) / b;
+                // P adjusts to clear money market
+                const L = k*Y - h*r;
+                P = L > 0.1 ? M / L : M / 0.1;
+            } else {
+                // Short Run: P is fixed at 1.0
+                // LM is r = (kY - M)/h
+                const denom = 1 + (mult * b * k) / h;
+                const num = mult * (A + (b * M)/h);
+                Y = num / denom;
+                r = (k*Y - M)/h;
+            }
+            
+            if(r < 0.1) warningMsg = "Liquidity Trap Region (r ≈ 0)";
+            else if(r > 15) warningMsg = "High Interest Rate";
+            else warningMsg = null;
+
+            return { Y, r, P, A, M, mult, type:'islm' };
+        },
+        draw: (sol, isGhost) => {
+            const style = isGhost ? 'ghost' : 'is';
+            const styleLM = isGhost ? 'ghost' : 'lm';
+            
+            // IS: r = (A - Y/mult)/b
+            // Uses sol.A (captured at solve time), so G changes shift IS properly
+            drawCurve(y => (sol.A - y/sol.mult)/PARAMS.b, style, isGhost?'IS₀':'IS₁'); 
+            
+            // LM: r = (kY - M/P)/h
+            // Uses sol.M and sol.P. In SR, P=1. 
+            // Only M changes shift LM. G/T changes move ALONG LM.
+            drawCurve(y => (PARAMS.k*y - sol.M/sol.P)/PARAMS.h, styleLM, isGhost?'LM₀':'LM₁'); 
+            
+            if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#94a3b8', 'Yn');
+            if(!isGhost) drawDot(sol.Y, sol.r);
+        },
+        explain: (sol) => `$$ IS: Y = ${sol.mult.toFixed(2)}(${sol.A.toFixed(0)} - ${PARAMS.b}r) $$ $$ LM: r = 0.25Y - ${sol.M.toFixed(0)}/P $$`
+    },
+
+    adas: {
+        name: "AD-AS",
+        legend: [
+            {label: 'AD Curve', color: '#10b981'},
+            {label: 'AS Curve', color: '#f59e0b'},
+            {label: 'LRAS', color: '#f59e0b', dashed: true}
+        ],
+        scenarios: [
+            { name: "Demand Boom", apply: {G:110, M:70, Pe:1.0} },
+            { name: "Deep Recession", apply: {G:30, M:30, Pe:1.0} },
+            { name: "Supply Shock", apply: {G:60, M:60, Pe:1.6} },
+            { name: "Deflation", apply: {G:30, M:30, Pe:0.7} }
+        ],
+        solve: (st) => {
+            const { c1, c0, I0, b, k, h, Yn } = PARAMS;
+            const { G, T, M, Pe } = st;
+            const mult = 1 / (1 - c1);
+            const A = c0 + I0 + G - c1*T;
+
+            const denom = h + b*k*mult;
+            const term1 = (h * mult * A) / denom; 
+            const term2 = (b * M) / denom;
+
+            let Y, P;
+            if (st.horizon === 'short') {
+                P = Pe;
+                Y = term1 + term2/P;
+            } else if (st.horizon === 'long') {
+                Y = Yn;
+                P = term2 / Math.max(0.1, Y - term1);
+            } else {
+                const lambda = 0.5;
+                const a = lambda;
+                const b_q = Pe - lambda*Yn - term1*lambda;
+                const c_q = -term1*(Pe - lambda*Yn) - term2;
+                const det = Math.sqrt(Math.max(0, b_q*b_q - 4*a*c_q));
+                Y = (-b_q + det)/(2*a);
+                P = Pe + lambda*(Y - Yn);
+            }
+            return { Y, P, term1, term2, Pe, type:'adas' };
+        },
+        draw: (sol, isGhost) => {
+            const sAD = isGhost ? 'ghost' : 'ad';
+            const sAS = isGhost ? 'ghost' : 'as';
+
+            drawCurve(y => {
+                let den = y - sol.term1;
+                if(den < sol.term1 * 0.01) return null;
+                const val = sol.term2 / den;
+                return (val > 0 && val < view.maxY*1.5) ? val : null;
+            }, sAD, isGhost?'AD₀':'AD₁'); 
+            
+            if(state.horizon === 'short') drawCurve(y => sol.Pe, sAS, isGhost?'SRAS₀':'SRAS₁');
+            else if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#fbbf24', 'LRAS');
+            else if(state.horizon === 'medium') drawCurve(y => sol.Pe + 0.5*(y-PARAMS.Yn), sAS, isGhost?'AS₀':'AS₁');
+            
+            if(!isGhost) drawDot(sol.Y, sol.P);
+        },
+        explain: (sol) => `$$ Y = AD(P) \\text{ derived from IS-LM} $$`
+    },
+
+    solow: {
+        name: "Solow",
+        legend: [
+            {label: 'Production f(k)', color: '#3b82f6'},
+            {label: 'Investment sf(k)', color: '#10b981'},
+            {label: 'Depreciation (δ+n)k', color: '#ef4444'}
+        ],
+        scenarios: [
+            { name: "Inv. Boost (s↑)", apply: {s:0.5, d:0.1, n:0.02} },
+            { name: "Cap. Destruction", apply: {s:0.3, d:0.2, n:0.02} },
+            { name: "Pop. Boom (n↑)", apply: {s:0.3, d:0.1, n:0.08} }
+        ],
+        solve: (st) => {
+            const { s, d, n } = st;
+            const alpha = 0.33;
+            const effDep = d + n;
+            const k_star = Math.pow(s/effDep, 1/(1-alpha));
+            const y_star = Math.pow(k_star, alpha);
+            return { k: k_star, y: y_star, effDep, s, type:'solow' };
+        },
+        draw: (sol, isGhost) => {
+            const alpha = 0.33;
+            if(!isGhost) {
+                drawCurve(k => Math.pow(k, alpha), 'is', 'y=f(k)');
+                drawCurve(k => sol.effDep * k, 'lm', '(δ+n)k');
+            }
+            drawCurve(k => sol.s * Math.pow(k, alpha), isGhost?'ghost':'ad', isGhost?'i₀':'i₁'); 
+            if(!isGhost) drawDot(sol.k, sol.s * Math.pow(sol.k, alpha));
+        },
+        explain: (sol) => `$$ i = s k^\\alpha \\quad i = (\\delta+n)k $$`
+    },
+
+    mundell: {
+        name: "Mundell-Fleming",
+        legend: [
+            {label: 'IS* Curve', color: '#3b82f6'},
+            {label: 'LM* Curve', color: '#ef4444'}
+        ],
+        scenarios: [
+            { name: "Fiscal Exp", apply: {G:100, M:60, rs:3.0} },
+            { name: "Monetary Exp", apply: {G:60, M:100, rs:3.0} },
+            { name: "Risk Premium", apply: {G:60, M:60, rs:7.0} }
+        ],
+        solve: (st) => {
+            const { k, h, c1, I0, b, c0 } = PARAMS;
+            const { M, G, T, rs } = st;
+            
+            const Y = (M + h*rs) / k; 
+            const I = I0 - b*rs;
+            const C = c0 + c1*(Y - T);
+            const NX_aut = 50; const q = 10;
+            const e = (C + I + G + NX_aut - Y) / q;
+            
+            return { Y, e, I_comp: (I+G+NX_aut+c0-c1*T), q, type:'mundell' };
+        },
+        draw: (sol, isGhost) => {
+            const sIS = isGhost ? 'ghost' : 'is';
+            drawVertical(sol.Y, isGhost?'#334155':'#ef4444', isGhost?'LM*₀':'LM*₁'); 
+            drawCurve(y => (sol.I_comp + PARAMS.c1*y - y)/sol.q, sIS, isGhost?'IS*₀':'IS*₁'); 
+            if(!isGhost) drawDot(sol.Y, sol.e);
+        },
+        explain: (sol) => `$$ Y = LM^*(M, r^*) \\quad e = IS^*(Y, G, r^*) $$`
+    }
+};
+
+/* ==========================================================================
+   VIEW ENGINE (STABLE VIEWPORT)
+   ========================================================================== */
+function calculateViewWindow(sol, prevSol) {
+    // 1. Define STABLE Defaults (generous bounds that fit most standard scenarios)
+    // This prevents the axes from "jumping" or scaling for minor changes
+    let baseMaxX = 300;
+    let baseMaxY = 12;
+
+    if(sol.type === 'solow') { baseMaxX = 30; baseMaxY = 5; }
+    if(sol.type === 'adas')  { baseMaxX = 300; baseMaxY = 5; }
+    if(sol.type === 'mundell') { baseMaxX = 300; baseMaxY = 12; }
+
+    // 2. Only expand if data goes out of bounds
+    let eqX = sol.type === 'solow' ? sol.k : sol.Y;
+    let eqY = sol.type === 'solow' ? sol.y : (sol.type === 'mundell' ? sol.e : (sol.type === 'islm' ? sol.r : sol.P));
+    
+    // Check current and previous points
+    let maxX = eqX;
+    let maxY = eqY;
+    if(prevSol) {
+        let pX = sol.type === 'solow' ? prevSol.k : prevSol.Y;
+        let pY = sol.type === 'solow' ? prevSol.y : (sol.type === 'mundell' ? prevSol.e : (sol.type === 'islm' ? prevSol.r : prevSol.P));
+        maxX = Math.max(maxX, pX);
+        maxY = Math.max(maxY, pY);
+    }
+
+    // Apply expansion logic (only grow, never shrink below base)
+    view.maxX = Math.max(baseMaxX, maxX * 1.5);
+    view.maxY = Math.max(baseMaxY, maxY * 1.5);
+}
+
+function toScreen(x, y) {
+    const pad = 60;
+    const w = canvas.width; const h = canvas.height;
+    const sX = pad + (x / view.maxX) * (w - 2*pad);
+    const sY = (h - pad) - (y / view.maxY) * (h - 2*pad);
+    return [sX, sY];
+}
+
+function drawGrid() {
+    const pad = 60;
+    const w = canvas.width; const h = canvas.height;
+    
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
+
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.5; ctx.beginPath();
+    for(let i=0; i<=10; i++) {
+        const val = (i/10) * view.maxX;
+        const [sx, sy] = toScreen(val, 0);
+        ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
+    }
+    for(let i=0; i<=10; i++) {
+        const val = (i/10) * view.maxY;
+        const [sx, sy] = toScreen(0, val);
+        ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    const [ox, oy] = toScreen(0,0);
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad);
+    ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy);
+    ctx.stroke();
+
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#f1f5f9';
+    let xLab = "Output (Y)";
+    let yLab = state.model === 'islm' ? "Interest Rate (r)" : (state.model === 'adas' ? "Price Level (P)" : "Value");
+    if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Value"; }
+    if(state.model === 'mundell') yLab = "Exchange Rate (e)";
+    
+    ctx.fillText(xLab, w - 80, oy + 35);
+    ctx.fillText(yLab, ox - 10, pad - 10);
+    
+    ctx.fillStyle = '#64748b'; ctx.font = '10px monospace';
+    for(let i=1; i<=10; i+=2) {
+        const val = (i/10) * view.maxX;
+        const [sx, sy] = toScreen(val, 0);
+        if(sx < w-pad) ctx.fillText(Math.round(val), sx-10, oy+20);
+    }
+    for(let i=1; i<=10; i+=2) {
+        const val = (i/10) * view.maxY;
+        const [sx, sy] = toScreen(0, val);
+        if(sy > pad) ctx.fillText(val.toFixed(1), ox-35, sy+4);
+    }
+}
+
+function drawCurve(func, style, label) {
+    const colors = { is: '#3b82f6', lm: '#ef4444', ad: '#10b981', as: '#f59e0b', ghost: '#475569' };
+    const pad = 60;
+    
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad, pad, canvas.width-2*pad, canvas.height-2*pad); ctx.clip();
+
+    ctx.beginPath(); ctx.strokeStyle = colors[style] || '#fff'; 
+    ctx.lineWidth = style === 'ghost' ? 2 : 3;
+    if(style === 'ghost') ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
+    
+    let lastX, lastY, lastMathX, lastMathY;
+    let start = true;
+    
+    const samples = 400;
+    const mathStep = view.maxX / samples;
+
+    for(let i = 0; i <= samples; i++) {
+        const mathX = i * mathStep;
+        const mathY = func(mathX);
+        
+        if(mathY === null || isNaN(mathY) || !isFinite(mathY)) { start=true; continue; }
+        if(mathY < -view.maxY*0.1 || mathY > view.maxY*1.2) { start=true; continue; }
+
+        const [sx, sy] = toScreen(mathX, mathY);
+        
+        if(!start && lastMathY !== undefined) {
+             const dy = Math.abs(mathY - lastMathY);
+             const dx = Math.abs(mathX - lastMathX);
+             if(dx > 0 && (dy/dx) > 100) { start = true; continue; } 
+        }
+
+        if(start) { ctx.moveTo(sx, sy); start=false; } else ctx.lineTo(sx, sy);
+        lastX = sx; lastY = sy; lastMathX = mathX; lastMathY = mathY;
+    }
+    ctx.stroke();
+    
+    if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10 && lastY < canvas.height-pad-10) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+        const m = ctx.measureText(label);
+        ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
+        ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; 
+        ctx.fillText(label, lastX+8, lastY);
+    }
+    ctx.restore();
+}
+
+function drawVertical(val, color, label) {
+    const pad = 60;
+    const [sx, sy] = toScreen(val, 0);
+    ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
+    ctx.beginPath(); ctx.setLineDash([5,5]); ctx.strokeStyle = color;
+    ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
+    ctx.stroke(); 
+    if(label) { ctx.fillStyle=color; ctx.fillText(label, sx+5, pad+15); }
+    ctx.restore();
+}
+
+function drawDot(x, y) {
+    const pad = 60;
+    const [sx, sy] = toScreen(x, y);
+    if(sx < pad || sx > canvas.width-pad || sy < pad || sy > canvas.height-pad) return;
+
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
+    const [ox, oy] = toScreen(0,0);
+    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ox, sy); ctx.stroke();
+    ctx.restore();
+}
+
+function updateLegend() {
+    const m = MODELS[state.model];
+    const leg = document.getElementById('legend-content');
+    leg.innerHTML = m.legend.map(i => `
+        <div class="legend-item">
+            <div class="legend-line" style="background:${i.color}; border-bottom:${i.dashed?'2px dashed':'none'}"></div>
+            ${i.label}
+        </div>
+    `).join('');
+}
+
+/* ==========================================================================
+   APP LOGIC
+   ========================================================================== */
+function update() {
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+
+    const m = MODELS[state.model];
+    const sol = m.solve(state);
+    let prevSol = null;
+    if(prevState) prevSol = m.solve(prevState);
+
+    const wBanner = document.getElementById('warning');
+    if(warningMsg) { wBanner.innerText = warningMsg; wBanner.style.display = 'block'; }
+    else { wBanner.style.display = 'none'; }
+
+    calculateViewWindow(sol, prevSol);
+    
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    drawGrid();
+
+    if(prevSol) m.draw(prevSol, true);
+    m.draw(sol, false);
+
+    document.getElementById('math-display').innerHTML = m.explain(sol);
+    document.getElementById('analysis-text').innerText = `${m.name} Analysis: Compare initial (dashed) vs current state.`;
+    updateLegend();
+    
+    let stats = [];
+    if(sol.type==='islm') stats=[['Y', sol.Y.toFixed(1)], ['r', sol.r.toFixed(2)+'%']];
+    else if(sol.type==='adas') stats=[['Y', sol.Y.toFixed(1)], ['P', sol.P.toFixed(2)]];
+    else if(sol.type==='solow') stats=[['k*', sol.k.toFixed(1)], ['y*', sol.y.toFixed(2)]];
+    else stats=[['Y', sol.Y.toFixed(1)], ['e', sol.e.toFixed(2)]];
+    
+    document.getElementById('stats').innerHTML = stats.map(s => `
+        <div class="stat-box"><div class="stat-label">${s[0]}</div><div class="stat-num">${s[1]}</div></div>
+    `).join('');
+
+    if(window.MathJax) MathJax.typesetPromise();
+    warningMsg = null;
+}
+
+function resetModel() {
+    if(DEFAULTS[state.model]) {
+        state = { ...state, ...DEFAULTS[state.model] };
+        prevState = null;
+        updateControls();
+        update();
+    }
+}
+
+const TOOLTIPS = {
+    G: "Gov Spending: Shifts IS / AD right.",
+    T: "Taxes: Shifts IS left. Reduces Disposable Income.",
+    M: "Money Supply: Shifts LM / AD right. Lowers r.",
+    Pe: "Expected Price: Shifts SRAS. Wage setting.",
+    s: "Savings Rate: Rotates Investment curve up.",
+    d: "Depreciation: Rotates break-even line up.",
+    n: "Pop Growth: Dilutes capital per worker.",
+    rs: "World Rate: Sets domestic rate in open economy."
+};
+
+function switchModel(id) {
+    state.model = id; prevState = null;
+    document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    updateControls();
+    
+    const sDiv = document.getElementById('scenarios'); sDiv.innerHTML = '';
+    MODELS[id].scenarios.forEach(sc => {
+        const b = document.createElement('button'); b.className = 'scenario-btn'; b.innerText = sc.name;
+        b.onclick = () => {
+            prevState = JSON.parse(JSON.stringify(state));
+            Object.assign(state, sc.apply);
+            updateControls();
+            update();
+        };
+        sDiv.appendChild(b);
+    });
+
+    document.getElementById('horizon-ctrl').style.display = (id==='solow'||id==='mundell')?'none':'flex';
+    update();
+}
+
+function updateControls() {
+    const cDiv = document.getElementById('controls'); cDiv.innerHTML = '';
+    const defs = {
+        islm: ['G','T','M'], adas: ['G','M','Pe'], 
+        solow: ['s','d','n'], mundell: ['G','M','rs']
+    };
+    const ranges = {
+        G:[20,150,1], T:[20,150,1], M:[20,150,1], Pe:[0.5,2.0,0.1],
+        s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.01], rs:[1,8,0.1]
+    };
+    
+    defs[state.model].forEach(key => {
+        const r = ranges[key];
+        const d = document.createElement('div'); d.className = 'slider-group';
+        d.innerHTML = `
+            <div class="slider-header">
+                <div class="label-wrap">${key} <div class="info-btn">i<div class="tooltip-box">${TOOLTIPS[key]}</div></div></div>
+                <span class="slider-val" id="val-${key}">${state[key]}</span>
+            </div>
+            <input type="range" id="in-${key}" min="${r[0]}" max="${r[1]}" step="${r[2]}" value="${state[key]}">`;
+        cDiv.appendChild(d);
+        d.querySelector('input').addEventListener('input', e => {
+            state[key] = parseFloat(e.target.value);
+            document.getElementById(`val-${key}`).innerText = state[key];
+            update();
+        });
+    });
+}
+
+function setHorizon(h) {
+    state.horizon = h;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    update();
+}
+
+window.addEventListener('resize', update);
+switchModel('islm');
+
+</script>
+</body>
+</html>

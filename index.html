@@ -3,61 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MacroSim | Stable Viewport Edition</title>
+    <title>MacroSim | Classroom Edition</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
-            --bg-body: #0f172a; --bg-panel: #1e293b; --bg-sidebar: #020617;
-            --border: #334155; --text-main: #f1f5f9; --text-muted: #94a3b8;
-            --c-blue: #3b82f6; --c-red: #ef4444; --c-green: #10b981; --c-yellow: #f59e0b;
-            --accent: #6366f1; --warn: #f59e0b;
+            /* Default Dark Mode (Student/Laptop View) */
+            --bg-body: #0f172a;
+            --bg-panel: #1e293b; 
+            --bg-sidebar: #020617;
+            --border: #334155; 
+            --text-main: #f1f5f9; 
+            --text-muted: #94a3b8;
+            --c-blue: #3b82f6; 
+            --c-red: #ef4444; 
+            --c-green: #10b981; 
+            --c-yellow: #f59e0b;
+            --accent: #6366f1;
+            --warn: #f59e0b;
+            --grid-line: #334155;
+            --axis-line: #94a3b8;
         }
+
+        /* Projector Mode (Light Theme) - Added for Classroom Visibility */
+        :root.light-mode {
+            --bg-body: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-sidebar: #f1f5f9;
+            --border: #cbd5e1;
+            --text-main: #0f172a;      
+            --text-muted: #475569;
+            --grid-line: #e2e8f0;
+            --axis-line: #64748b;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-body); color: var(--text-main); margin: 0; height: 100vh;
             display: flex; flex-direction: column; overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
         header {
-            height: 50px; padding: 0 20px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border);
+            height: 50px;
+            padding: 0 20px; background-color: var(--bg-sidebar); border-bottom: 1px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
+            transition: background-color 0.3s, border-color 0.3s;
         }
-        .brand { font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .brand { font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
         .tag { background: var(--accent); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
         
         .layout { display: flex; flex: 1; height: calc(100vh - 50px); }
         .sidebar {
-            width: 360px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
+            width: 360px;
+            background-color: var(--bg-sidebar); border-right: 1px solid var(--border);
             display: flex; flex-direction: column; overflow-y: auto;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         .section-title {
-            padding: 16px 20px 8px; font-size: 0.7rem; text-transform: uppercase;
+            padding: 16px 20px 8px;
+            font-size: 0.7rem; text-transform: uppercase;
             color: var(--text-muted); font-weight: 700; letter-spacing: 1px; border-top: 1px solid var(--border);
         }
         .section-title:first-child { border-top: none; }
         
         .model-list { list-style: none; padding: 0; margin: 0; }
         .model-btn {
-            width: 100%; text-align: left; padding: 12px 20px; background: transparent; border: none;
-            color: var(--text-muted); cursor: pointer; border-left: 3px solid transparent; font-size: 0.9rem; transition: all 0.2s;
+            width: 100%;
+            text-align: left; padding: 12px 20px; background: transparent; border: none;
+            color: var(--text-muted); cursor: pointer; border-left: 3px solid transparent; font-size: 0.9rem;
+            transition: all 0.2s;
         }
-        .model-btn:hover { background: #1e293b; color: #fff; }
-        .model-btn.active { background: #1e293b; color: #fff; border-left-color: var(--accent); }
+        .model-btn:hover { background: var(--bg-panel); color: var(--text-main); }
+        .model-btn.active { background: var(--bg-panel); color: var(--text-main); border-left-color: var(--accent); font-weight: 600; }
         
         .controls-container { padding: 10px 20px; }
         .slider-group { margin-bottom: 16px; }
         .slider-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 8px; }
         .label-wrap { display: flex; align-items: center; gap: 8px; }
         .info-btn {
-            display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px;
-            border-radius: 50%; background: #334155; color: #cbd5e1; font-size: 10px; font-weight: bold;
+            display: inline-flex;
+            align-items: center; justify-content: center; width: 14px; height: 14px;
+            border-radius: 50%; background: var(--border); color: var(--text-muted); font-size: 10px; font-weight: bold;
             font-family: serif; font-style: italic; cursor: help; position: relative;
         }
         .info-btn:hover { background: var(--accent); color: white; }
         .tooltip-box {
-            position: absolute; bottom: 120%; left: -10px; background: #020617; border: 1px solid #475569;
-            color: #f1f5f9; padding: 10px; border-radius: 6px; font-size: 0.75rem; width: 240px; z-index: 1000;
-            display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none; line-height: 1.4;
+            position: absolute;
+            bottom: 120%; left: -10px; background: var(--bg-sidebar); border: 1px solid var(--border);
+            color: var(--text-main); padding: 10px; border-radius: 6px; font-size: 0.75rem; width: 240px;
+            z-index: 1000;
+            display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); pointer-events: none; line-height: 1.4;
         }
         .info-btn:hover .tooltip-box { display: block; }
         .slider-val { font-family: monospace; color: var(--accent); }
@@ -65,28 +100,34 @@
         
         .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px 20px; }
         .scenario-btn {
-            background: #1e293b; border: 1px solid var(--border); color: var(--text-muted); padding: 8px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border); color: var(--text-muted); padding: 8px;
             border-radius: 6px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s; text-align: center;
         }
-        .scenario-btn:hover { border-color: var(--accent); color: #fff; background: #334155; }
+        .scenario-btn:hover { border-color: var(--accent); color: var(--text-main); background: var(--border); }
         
         .reset-btn {
-            width: calc(100% - 40px); margin: 0 20px 20px 20px; padding: 10px; background: transparent;
+            width: calc(100% - 40px);
+            margin: 0 20px 20px 20px; padding: 10px; background: transparent;
             border: 1px dashed var(--border); color: var(--text-muted); cursor: pointer; border-radius: 6px;
             font-size: 0.8rem; transition: all 0.2s;
         }
-        .reset-btn:hover { border-color: var(--accent); color: #fff; background: rgba(99, 102, 241, 0.1); }
+        .reset-btn:hover { border-color: var(--accent); color: var(--text-main); background: rgba(99, 102, 241, 0.1); }
 
         .viz-panel {
-            flex: 2; position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
+            flex: 2;
+            position: relative; display: flex; flex-direction: column; background: var(--bg-body); overflow: hidden;
+            transition: background-color 0.3s;
         }
         
         .horizon-tabs {
-            position: absolute; top: 15px; left: 15px; z-index: 10;
-            display: flex; background: #1e293b; padding: 4px; border-radius: 8px; border: 1px solid var(--border);
+            position: absolute;
+            top: 15px; left: 15px; z-index: 10;
+            display: flex; background: var(--bg-panel); padding: 4px; border-radius: 8px; border: 1px solid var(--border);
         }
         .tab-btn {
-            background: transparent; border: none; color: var(--text-muted); padding: 6px 12px;
+            background: transparent;
+            border: none; color: var(--text-muted); padding: 6px 12px;
             font-size: 0.8rem; cursor: pointer; border-radius: 6px;
         }
         .tab-btn.active { background: var(--accent); color: white; }
@@ -94,30 +135,39 @@
         canvas { width: 100%; height: 100%; }
         
         .edu-panel {
-            width: 320px; background-color: #0f172a; border-left: 1px solid var(--border);
+            width: 320px;
+            background-color: var(--bg-body); border-left: 1px solid var(--border);
             display: flex; flex-direction: column; overflow-y: auto; padding: 20px;
+            transition: background-color 0.3s, border-color 0.3s;
         }
         .edu-card {
-            background: #1e293b; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px;
         }
-        .edu-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        .math-block { font-size: 0.8rem; color: #cbd5e1; line-height: 1.6; overflow-x: auto; }
-        .analysis-text { font-size: 0.85rem; color: #94a3b8; line-height: 1.5; }
+        .edu-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-main);
+        border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .math-block { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; overflow-x: auto; }
+        .analysis-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
         
         .stats-overlay {
-            position: absolute; top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10;
+            position: absolute;
+            top: 15px; right: 15px; display: flex; gap: 10px; z-index: 10;
         }
         .stat-box {
-            background: rgba(15, 23, 42, 0.95); border: 1px solid var(--border); padding: 6px 12px;
-            border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            background: var(--bg-panel);
+            border: 1px solid var(--border); padding: 6px 12px;
+            border-radius: 6px; text-align: right; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            opacity: 0.95;
         }
         .stat-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
-        .stat-num { font-size: 0.95rem; font-weight: 700; color: #fff; font-family: monospace; }
+        .stat-num { font-size: 0.95rem; font-weight: 700; color: var(--text-main); font-family: monospace; }
         
         .warning-banner {
-            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            position: absolute;
+            bottom: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(245, 158, 11, 0.15); border: 1px solid var(--warn); color: var(--warn);
-            padding: 8px 16px; border-radius: 99px; font-size: 0.75rem; font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 99px; font-size: 0.75rem; font-weight: 600;
             pointer-events: none; display: none; backdrop-filter: blur(4px);
         }
 
@@ -126,10 +176,19 @@
         .legend-line { width: 16px; height: 3px; border-radius: 2px; }
         
         .creator-mark {
-            margin-top: auto; padding-top: 20px; text-align: right;
-            font-size: 10px; color: gold; opacity: 0.2; font-family: serif; font-style: italic;
+            margin-top: auto;
+            padding-top: 20px; text-align: right;
+            font-size: 10px; color: var(--text-muted); opacity: 0.5; font-family: serif; font-style: italic;
             letter-spacing: 0.5px;
         }
+
+        /* Toggle Button Style */
+        .theme-toggle {
+            background: transparent; border: 1px solid var(--border); color: var(--text-main);
+            padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-right: 15px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .theme-toggle:hover { background: var(--bg-panel); }
     </style>
 </head>
 <body>
@@ -137,7 +196,10 @@
 <header>
     <div class="brand">
         <div class="brand-icon">📈</div>
-        MACRO SIMULATOR <span class="tag">v16.0</span>
+        MACRO SIMULATOR <span class="tag">v16.1</span>
+    </div>
+    <div style="display:flex; align-items:center;">
+        <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">☀️ Projector Mode</button>
     </div>
 </header>
 
@@ -191,20 +253,40 @@
 
 <script>
 /* ==========================================================================
+   THEME ENGINE (Light/Dark)
+   ========================================================================== */
+function toggleTheme() {
+    const root = document.documentElement;
+    const btn = document.getElementById('theme-btn');
+    
+    if (root.classList.contains('light-mode')) {
+        root.classList.remove('light-mode');
+        btn.innerText = "☀️ Projector Mode";
+    } else {
+        root.classList.add('light-mode');
+        btn.innerText = "🌙 Dark Mode";
+    }
+    update(); // Redraw canvas with new colors
+}
+
+/* Helper to fetch CSS variables for Canvas */
+function getVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/* ==========================================================================
    CORE ENGINE
    ========================================================================== */
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 const PARAMS = { c1: 0.75, c0: 10, I0: 20, b: 15, k: 0.5, h: 2.0, Yn: 100 };
-
 const DEFAULTS = {
     islm: { G: 60, T: 60, M: 60 },
     adas: { G: 60, M: 60, Pe: 1.0 },
     solow: { s: 0.3, d: 0.1, n: 0.02 },
     mundell: { G: 60, M: 60, rs: 3.0 }
 };
-
 let state = { model: 'islm', horizon: 'short', G: 60, T: 60, M: 60, Pe: 1.0, s: 0.3, d: 0.1, n: 0.02, rs: 3.0 };
 let prevState = null;
 let view = { maxX: 200, maxY: 10 }; 
@@ -231,13 +313,11 @@ const MODELS = {
             let { G, T, M } = st;
             // Bounds to prevent math breaking
             G=Math.max(20,Math.min(150,G)); T=Math.max(20,Math.min(150,T)); M=Math.max(20,Math.min(150,M));
-            
             const { c1, c0, I0, b, k, h, Yn } = PARAMS;
             const mult = 1 / (1 - c1);
             const A = c0 + I0 + G - c1*T; 
 
             let Y, r, P = 1.0;
-
             if (st.horizon === 'long') {
                 Y = Yn;
                 r = (A - Y/mult) / b;
@@ -256,23 +336,17 @@ const MODELS = {
             if(r < 0.1) warningMsg = "Liquidity Trap Region (r ≈ 0)";
             else if(r > 15) warningMsg = "High Interest Rate";
             else warningMsg = null;
-
             return { Y, r, P, A, M, mult, type:'islm' };
         },
         draw: (sol, isGhost) => {
             const style = isGhost ? 'ghost' : 'is';
             const styleLM = isGhost ? 'ghost' : 'lm';
-            
             // IS: r = (A - Y/mult)/b
-            // Uses sol.A (captured at solve time), so G changes shift IS properly
-            drawCurve(y => (sol.A - y/sol.mult)/PARAMS.b, style, isGhost?'IS₀':'IS₁'); 
-            
+            drawCurve(y => (sol.A - y/sol.mult)/PARAMS.b, style, isGhost?'IS₀':'IS₁');
             // LM: r = (kY - M/P)/h
-            // Uses sol.M and sol.P. In SR, P=1. 
-            // Only M changes shift LM. G/T changes move ALONG LM.
             drawCurve(y => (PARAMS.k*y - sol.M/sol.P)/PARAMS.h, styleLM, isGhost?'LM₀':'LM₁'); 
             
-            if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#94a3b8', 'Yn');
+            if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, getVar('--axis-line'), 'Yn');
             if(!isGhost) drawDot(sol.Y, sol.r);
         },
         explain: (sol) => `$$ IS: Y = ${sol.mult.toFixed(2)}(${sol.A.toFixed(0)} - ${PARAMS.b}r) $$ $$ LM: r = 0.25Y - ${sol.M.toFixed(0)}/P $$`
@@ -300,7 +374,6 @@ const MODELS = {
             const denom = h + b*k*mult;
             const term1 = (h * mult * A) / denom; 
             const term2 = (b * M) / denom;
-
             let Y, P;
             if (st.horizon === 'short') {
                 P = Pe;
@@ -322,7 +395,6 @@ const MODELS = {
         draw: (sol, isGhost) => {
             const sAD = isGhost ? 'ghost' : 'ad';
             const sAS = isGhost ? 'ghost' : 'as';
-
             drawCurve(y => {
                 let den = y - sol.term1;
                 if(den < sol.term1 * 0.01) return null;
@@ -333,7 +405,6 @@ const MODELS = {
             if(state.horizon === 'short') drawCurve(y => sol.Pe, sAS, isGhost?'SRAS₀':'SRAS₁');
             else if(state.horizon === 'long' && !isGhost) drawVertical(PARAMS.Yn, '#fbbf24', 'LRAS');
             else if(state.horizon === 'medium') drawCurve(y => sol.Pe + 0.5*(y-PARAMS.Yn), sAS, isGhost?'AS₀':'AS₁');
-            
             if(!isGhost) drawDot(sol.Y, sol.P);
         },
         explain: (sol) => `$$ Y = AD(P) \\text{ derived from IS-LM} $$`
@@ -365,7 +436,7 @@ const MODELS = {
                 drawCurve(k => Math.pow(k, alpha), 'is', 'y=f(k)');
                 drawCurve(k => sol.effDep * k, 'lm', '(δ+n)k');
             }
-            drawCurve(k => sol.s * Math.pow(k, alpha), isGhost?'ghost':'ad', isGhost?'i₀':'i₁'); 
+            drawCurve(k => sol.s * Math.pow(k, alpha), isGhost?'ghost':'ad', isGhost?'i₀':'i₁');
             if(!isGhost) drawDot(sol.k, sol.s * Math.pow(sol.k, alpha));
         },
         explain: (sol) => `$$ i = s k^\\alpha \\quad i = (\\delta+n)k $$`
@@ -385,18 +456,16 @@ const MODELS = {
         solve: (st) => {
             const { k, h, c1, I0, b, c0 } = PARAMS;
             const { M, G, T, rs } = st;
-            
             const Y = (M + h*rs) / k; 
             const I = I0 - b*rs;
             const C = c0 + c1*(Y - T);
             const NX_aut = 50; const q = 10;
             const e = (C + I + G + NX_aut - Y) / q;
-            
             return { Y, e, I_comp: (I+G+NX_aut+c0-c1*T), q, type:'mundell' };
         },
         draw: (sol, isGhost) => {
             const sIS = isGhost ? 'ghost' : 'is';
-            drawVertical(sol.Y, isGhost?'#334155':'#ef4444', isGhost?'LM*₀':'LM*₁'); 
+            drawVertical(sol.Y, isGhost? getVar('--border') :'#ef4444', isGhost?'LM*₀':'LM*₁'); 
             drawCurve(y => (sol.I_comp + PARAMS.c1*y - y)/sol.q, sIS, isGhost?'IS*₀':'IS*₁'); 
             if(!isGhost) drawDot(sol.Y, sol.e);
         },
@@ -405,11 +474,9 @@ const MODELS = {
 };
 
 /* ==========================================================================
-   VIEW ENGINE (STABLE VIEWPORT)
+   VIEW ENGINE
    ========================================================================== */
 function calculateViewWindow(sol, prevSol) {
-    // 1. Define STABLE Defaults (generous bounds that fit most standard scenarios)
-    // This prevents the axes from "jumping" or scaling for minor changes
     let baseMaxX = 300;
     let baseMaxY = 12;
 
@@ -417,11 +484,9 @@ function calculateViewWindow(sol, prevSol) {
     if(sol.type === 'adas')  { baseMaxX = 300; baseMaxY = 5; }
     if(sol.type === 'mundell') { baseMaxX = 300; baseMaxY = 12; }
 
-    // 2. Only expand if data goes out of bounds
     let eqX = sol.type === 'solow' ? sol.k : sol.Y;
     let eqY = sol.type === 'solow' ? sol.y : (sol.type === 'mundell' ? sol.e : (sol.type === 'islm' ? sol.r : sol.P));
     
-    // Check current and previous points
     let maxX = eqX;
     let maxY = eqY;
     if(prevSol) {
@@ -431,7 +496,6 @@ function calculateViewWindow(sol, prevSol) {
         maxY = Math.max(maxY, pY);
     }
 
-    // Apply expansion logic (only grow, never shrink below base)
     view.maxX = Math.max(baseMaxX, maxX * 1.5);
     view.maxY = Math.max(baseMaxY, maxY * 1.5);
 }
@@ -447,11 +511,15 @@ function toScreen(x, y) {
 function drawGrid() {
     const pad = 60;
     const w = canvas.width; const h = canvas.height;
+    const gridColor = getVar('--grid-line');
+    const axisColor = getVar('--axis-line');
+    const textColor = getVar('--text-main');
     
     ctx.save();
-    ctx.beginPath(); ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
+    ctx.beginPath();
+    ctx.rect(pad, pad, w-2*pad, h-2*pad); ctx.clip();
 
-    ctx.strokeStyle = '#334155'; ctx.lineWidth = 0.5; ctx.beginPath();
+    ctx.strokeStyle = gridColor; ctx.lineWidth = 0.5; ctx.beginPath();
     for(let i=0; i<=10; i++) {
         const val = (i/10) * view.maxX;
         const [sx, sy] = toScreen(val, 0);
@@ -466,12 +534,12 @@ function drawGrid() {
     ctx.restore();
 
     const [ox, oy] = toScreen(0,0);
-    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.strokeStyle = axisColor; ctx.lineWidth = 2; ctx.beginPath();
     ctx.moveTo(ox, pad); ctx.lineTo(ox, h-pad);
     ctx.moveTo(pad, oy); ctx.lineTo(w-pad, oy);
     ctx.stroke();
 
-    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#f1f5f9';
+    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = textColor;
     let xLab = "Output (Y)";
     let yLab = state.model === 'islm' ? "Interest Rate (r)" : (state.model === 'adas' ? "Price Level (P)" : "Value");
     if(state.model === 'solow') { xLab = "Capital (k)"; yLab = "Value"; }
@@ -480,7 +548,7 @@ function drawGrid() {
     ctx.fillText(xLab, w - 80, oy + 35);
     ctx.fillText(yLab, ox - 10, pad - 10);
     
-    ctx.fillStyle = '#64748b'; ctx.font = '10px monospace';
+    ctx.fillStyle = getVar('--text-muted'); ctx.font = '10px monospace';
     for(let i=1; i<=10; i+=2) {
         const val = (i/10) * view.maxX;
         const [sx, sy] = toScreen(val, 0);
@@ -500,16 +568,14 @@ function drawCurve(func, style, label) {
     ctx.save();
     ctx.beginPath(); ctx.rect(pad, pad, canvas.width-2*pad, canvas.height-2*pad); ctx.clip();
 
-    ctx.beginPath(); ctx.strokeStyle = colors[style] || '#fff'; 
+    ctx.beginPath(); ctx.strokeStyle = colors[style] || '#fff';
     ctx.lineWidth = style === 'ghost' ? 2 : 3;
     if(style === 'ghost') ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
-    
     let lastX, lastY, lastMathX, lastMathY;
     let start = true;
     
     const samples = 400;
     const mathStep = view.maxX / samples;
-
     for(let i = 0; i <= samples; i++) {
         const mathX = i * mathStep;
         const mathY = func(mathX);
@@ -518,7 +584,6 @@ function drawCurve(func, style, label) {
         if(mathY < -view.maxY*0.1 || mathY > view.maxY*1.2) { start=true; continue; }
 
         const [sx, sy] = toScreen(mathX, mathY);
-        
         if(!start && lastMathY !== undefined) {
              const dy = Math.abs(mathY - lastMathY);
              const dx = Math.abs(mathX - lastMathX);
@@ -533,6 +598,8 @@ function drawCurve(func, style, label) {
     if(label && lastX && lastX < canvas.width-pad-10 && lastY > pad+10 && lastY < canvas.height-pad-10) {
         ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
         const m = ctx.measureText(label);
+        // Use background color for label backing to ensure readability over grid
+        ctx.fillStyle = getVar('--bg-body');
         ctx.fillRect(lastX+6, lastY-12, m.width+4, 14);
         ctx.fillStyle = colors[style]; ctx.font = 'bold 12px sans-serif'; 
         ctx.fillText(label, lastX+8, lastY);
@@ -546,7 +613,7 @@ function drawVertical(val, color, label) {
     ctx.save(); ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
     ctx.beginPath(); ctx.setLineDash([5,5]); ctx.strokeStyle = color;
     ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height);
-    ctx.stroke(); 
+    ctx.stroke();
     if(label) { ctx.fillStyle=color; ctx.fillText(label, sx+5, pad+15); }
     ctx.restore();
 }
@@ -556,12 +623,20 @@ function drawDot(x, y) {
     const [sx, sy] = toScreen(x, y);
     if(sx < pad || sx > canvas.width-pad || sy < pad || sy > canvas.height-pad) return;
 
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+    // Outer ring
+    ctx.fillStyle = getVar('--bg-body'); ctx.beginPath();
+    ctx.arc(sx, sy, 7, 0, Math.PI*2); ctx.fill();
+    
+    // Inner Dot
+    ctx.fillStyle = getVar('--text-main'); ctx.beginPath();
+    ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+
     ctx.save();
     ctx.beginPath(); ctx.rect(pad,pad,canvas.width-2*pad,canvas.height-2*pad); ctx.clip();
     const [ox, oy] = toScreen(0,0);
-    ctx.strokeStyle='rgba(255,255,255,0.3)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
+    ctx.strokeStyle = getVar('--text-muted'); ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy); ctx.lineTo(sx, oy); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ox, sy); ctx.stroke();
     ctx.restore();
 }
@@ -588,7 +663,6 @@ function update() {
     const sol = m.solve(state);
     let prevSol = null;
     if(prevState) prevSol = m.solve(prevState);
-
     const wBanner = document.getElementById('warning');
     if(warningMsg) { wBanner.innerText = warningMsg; wBanner.style.display = 'block'; }
     else { wBanner.style.display = 'none'; }
@@ -597,24 +671,20 @@ function update() {
     
     ctx.clearRect(0,0,canvas.width, canvas.height);
     drawGrid();
-
     if(prevSol) m.draw(prevSol, true);
     m.draw(sol, false);
 
     document.getElementById('math-display').innerHTML = m.explain(sol);
     document.getElementById('analysis-text').innerText = `${m.name} Analysis: Compare initial (dashed) vs current state.`;
     updateLegend();
-    
     let stats = [];
     if(sol.type==='islm') stats=[['Y', sol.Y.toFixed(1)], ['r', sol.r.toFixed(2)+'%']];
     else if(sol.type==='adas') stats=[['Y', sol.Y.toFixed(1)], ['P', sol.P.toFixed(2)]];
     else if(sol.type==='solow') stats=[['k*', sol.k.toFixed(1)], ['y*', sol.y.toFixed(2)]];
     else stats=[['Y', sol.Y.toFixed(1)], ['e', sol.e.toFixed(2)]];
-    
     document.getElementById('stats').innerHTML = stats.map(s => `
         <div class="stat-box"><div class="stat-label">${s[0]}</div><div class="stat-num">${s[1]}</div></div>
     `).join('');
-
     if(window.MathJax) MathJax.typesetPromise();
     warningMsg = null;
 }
@@ -645,7 +715,6 @@ function switchModel(id) {
     event.target.classList.add('active');
     
     updateControls();
-    
     const sDiv = document.getElementById('scenarios'); sDiv.innerHTML = '';
     MODELS[id].scenarios.forEach(sc => {
         const b = document.createElement('button'); b.className = 'scenario-btn'; b.innerText = sc.name;
@@ -672,7 +741,6 @@ function updateControls() {
         G:[20,150,1], T:[20,150,1], M:[20,150,1], Pe:[0.5,2.0,0.1],
         s:[0.1,0.6,0.01], d:[0.05,0.2,0.01], n:[0,0.1,0.01], rs:[1,8,0.1]
     };
-    
     defs[state.model].forEach(key => {
         const r = ranges[key];
         const d = document.createElement('div'); d.className = 'slider-group';
@@ -699,6 +767,7 @@ function setHorizon(h) {
 }
 
 window.addEventListener('resize', update);
+// Initial load
 switchModel('islm');
 
 </script>
